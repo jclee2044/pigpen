@@ -1,0 +1,44 @@
+# Project-owned Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+# Frontend dependencies and build output
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.local
+# Local household data and secrets
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+uploads/
+backups/
+*.pem
+*.key
+# Editor, operating-system and log artifacts
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+*.log
