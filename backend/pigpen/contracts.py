@@ -78,4 +78,43 @@ def operation_type():
     return Annotated[Union[tuple(models)], Field(discriminator='kind')]
 
 
+class Allocation(Model):
+    category_id: UUID
+    amount_minor: Money
+
+
+class BudgetSet(Model):
+    month: str
+    expected_revision: Annotated[StrictInt, Field(ge=0)] = 0
+    expected_income_minor: Money = 0
+    allocations: list[Allocation] | None = Field(default=None, max_length=500)
+
+    @field_validator('month')
+    @classmethod
+    def valid_month(cls, value):
+        month_bounds(value)
+        return value
+
+
+class PurchaseCreate(Model):
+    item: Text
+    amount_minor: PositiveMoney
+    category_id: UUID
+    transaction_date: date
+    merchant: Annotated[str, Field(max_length=200)] | None = None
+    description: Description = ''
+    request_id: UUID | None = None
+    request_revision: Revision | None = None
+
+
+class PurchaseUpdate(PurchaseCreate):
+    expected_revision: Revision
+
+
+class Delete(Model):
+    expected_revision: Revision
+
+
+PAYLOADS.update({'budget.set': BudgetSet, 'purchase.create': PurchaseCreate,
+                 'purchase.update': PurchaseUpdate, 'purchase.delete': Delete})
 Operation = operation_type()

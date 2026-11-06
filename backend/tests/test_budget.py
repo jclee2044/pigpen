@@ -1,0 +1,59 @@
+from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
+from uuid import uuid4
+import pytest
+from conftest import operation, submit
+
+
+def food(client):
+    return next(x for x in client.get('/api/v1/categories').json()['items'] if x['name']=='Food')
+
+
+def test_money_rollup_month_isolation_and_copy(client, users):
+    actor=users[0]['id']
+    parent=next(x for x in client.get('/api/v1/categories').json()['items'] if x['owner_id']==actor)
+    child=submit(client,'category.create',dict(name='Books',kind='personal',owner_id=actor,parent_id=parent['id']),actor)
+    f=food(client)
+    submit(client,'budget.set',dict(month='2026-11',expected_income_minor=100000,
+        allocations=[dict(category_id=parent['id'],amount_minor=20000),dict(category_id=f['id'],amount_minor=40000)]),actor)
+    for category, amount, day in [(parent['id'],3000,'2026-11-01'),(child['id'],2000,'2026-11-30'),(f['id'],99,'2026-12-01')]:
+        submit(client,'purchase.create',dict(item='Synthetic purchase',amount_minor=amount,category_id=category,transaction_date=day),actor)
+    nov=client.get('/api/v1/budget-months/2026-11').json()
+    assert nov['spent_minor']==5000
+    personal=next(x for x in nov['categories'] if x['category_id']==parent['id'])
+    assert personal['remaining_minor']==15000
+    assert nov['planned_unallocated_minor']==40000
+    submit(client,'budget.set',dict(month='2026-12'),actor)
+    dec=client.get('/api/v1/budget-months/2026-12').json()
+    assert dec['allocated_minor']==60000 and dec['spent_minor']==99
+    assert client.get('/api/v1/budget-months/2026-13').status_code==422
+
+
+@pytest.mark.parametrize('amount',[1.5,True,-10,0,9000000000001])
+def test_invalid_purchase_amount(client,users,amount):
+    op=operation('purchase.create',dict(item='Item',amount_minor=amount,category_id=food(client)['id'],transaction_date='2026-11-06'),users[0]['id'])
+    response=client.post('/api/v1/operations',json=op)
+    assert response.status_code==422
+    assert 'input' not in str(response.json())
+    assert client.get('/api/v1/purchases').json()['items']==[]
+
+
+def test_purchase_replay_concurrency_and_tombstone(client, users):
+    op=operation('purchase.create',dict(item='Item',amount_minor=123,category_id=food(client)['id'],transaction_date='2026-11-06'),users[0]['id'])
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results=list(pool.map(lambda _:client.post('/api/v1/operations',json=op), range(2)))
+    assert [r.status_code for r in results]==[200,200]
+    assert results[0].json()==results[1].json()
+    submit(client,'purchase.delete',dict(expected_revision=1),users[0]['id'],op['entity_id'])
+    assert client.post('/api/v1/operations',json=op).json()==results[0].json()
+    assert client.get('/api/v1/purchases').json()['items']==[]
+
+
+def test_purchase_optimistic_revision(client,users):
+    actor=users[0]['id']
+    payload=dict(item='Item',amount_minor=10,category_id=food(client)['id'],transaction_date='2026-11-06')
+    purchase=submit(client,'purchase.create',payload,actor)
+    submit(client,'purchase.update',dict(**payload,expected_revision=1),actor,purchase['id'])
+    response=client.post('/api/v1/operations',json=operation('purchase.update',dict(**payload,expected_revision=1),actor,purchase['id']))
+    assert response.status_code==409
+    assert response.json()['error']['details']['revision']==2

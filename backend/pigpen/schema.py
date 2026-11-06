@@ -56,3 +56,21 @@ categories = Table('categories', metadata, *record_columns(),
 Index('one_personal_parent', categories.c.owner_id, unique=True,
       sqlite_where=(categories.c.kind == 'personal') & categories.c.parent_id.is_(None))
 RESOURCES.update({'users': users, 'categories': categories})
+
+budget_months = Table('budget_months', metadata, *record_columns(),
+    Column('month', String, nullable=False, unique=True), Column('expected_income_minor', Integer, nullable=False),
+    CheckConstraint('expected_income_minor >= 0'))
+allocations = Table('allocations', metadata, *record_columns(),
+    Column('budget_month_id', String, ForeignKey('budget_months.id'), nullable=False),
+    Column('category_id', String, ForeignKey('categories.id'), nullable=False),
+    Column('amount_minor', Integer, nullable=False), CheckConstraint('amount_minor >= 0'),
+    UniqueConstraint('budget_month_id', 'category_id'))
+purchases = Table('purchases', metadata, *record_columns(),
+    Column('purchaser_id', String, ForeignKey('users.id'), nullable=False),
+    Column('category_id', String, ForeignKey('categories.id'), nullable=False),
+    Column('item', String, nullable=False), Column('amount_minor', Integer, nullable=False),
+    Column('transaction_date', String, nullable=False), Column('merchant', String), Column('description', String, nullable=False),
+    Column('request_id', String, unique=True), Column('bill_id', String), Column('bill_due', String),
+    CheckConstraint('amount_minor > 0'), UniqueConstraint('bill_id', 'bill_due'))
+Index('purchases_month_category', purchases.c.transaction_date, purchases.c.category_id)
+RESOURCES.update({'budget-months': budget_months, 'allocations': allocations, 'purchases': purchases})

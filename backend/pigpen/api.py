@@ -40,6 +40,11 @@ def router(db):
                 return {'items': [dict(x) for x in rows], 'limit': limit, 'offset': offset}
         return list_records
 
-    for resource in ('users', 'categories', 'notifications'):
+    @routes.get('/budget-months/{month}')
+    def budget(month: str):
+        with db.transaction() as c:
+            return service.summary(c, month)
+
+    for resource in ('users', 'categories', 'notifications', 'purchases'):
         routes.add_api_route('/'+resource, collection(resource), methods=['GET'], name='list_'+resource)
     return routes
