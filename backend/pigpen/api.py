@@ -30,7 +30,7 @@ def router(db):
         if table is None:
             raise DomainError('not_found', 'Unknown resource', 404)
         with db.transaction() as c:
-            return get(c, table, identifier)
+            return service.request_detail(c, identifier) if resource=='approval-requests' else get(c, table, identifier)
 
     def collection(resource):
         def list_records(limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0)):
@@ -50,6 +50,6 @@ def router(db):
         with db.transaction() as c:
             return {'items': service.upcoming_bills(c, month)}
 
-    for resource in ('users', 'categories', 'notifications', 'purchases', 'income', 'savings', 'recurring-bills'):
+    for resource in ('users', 'categories', 'notifications', 'purchases', 'income', 'savings', 'recurring-bills', 'wishlist-items', 'approval-requests', 'comments'):
         routes.add_api_route('/'+resource, collection(resource), methods=['GET'], name='list_'+resource)
     return routes

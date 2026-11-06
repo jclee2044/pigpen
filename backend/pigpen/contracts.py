@@ -2,7 +2,7 @@
 from datetime import date, datetime, timezone
 from typing import Annotated, Literal, Union
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, create_model, field_validator
+from pydantic import HttpUrl, BaseModel, ConfigDict, Field, StrictBool, StrictInt, create_model, field_validator
 from .domain import MAX_MINOR, month_bounds
 
 Money = Annotated[StrictInt, Field(ge=0, le=MAX_MINOR)]
@@ -159,4 +159,44 @@ class BillPay(Model):
 PAYLOADS.update({'income.create':IncomeCreate,'income.update':IncomeUpdate,'income.delete':Delete,
                  'savings.create':SavingsCreate,'savings.delete':Delete,
                  'bill.create':BillCreate,'bill.update':BillUpdate,'bill.pay':BillPay})
+class WishlistCreate(Model):
+    name: Text
+    price_minor: Money
+    description: Description = ''
+    url: HttpUrl | None = None
+
+
+class WishlistUpdate(WishlistCreate):
+    expected_revision: Revision
+    status: Literal['active','purchased','archived'] = 'active'
+
+
+class RequestCreate(Model):
+    item: Text
+    amount_minor: PositiveMoney
+    description: Description = ''
+    url: HttpUrl | None = None
+    category_id: UUID | None = None
+
+
+class RequestUpdate(RequestCreate):
+    expected_revision: Revision
+
+
+class VoteSet(Model):
+    request_id: UUID
+    request_revision: Revision
+    expected_revision: Annotated[StrictInt, Field(ge=0)] = 0
+    approved: StrictBool
+
+
+class CommentCreate(Model):
+    target_resource: Literal['wishlist-items','approval-requests']
+    target_id: UUID
+    text: Annotated[str, Field(min_length=1,max_length=4000)]
+
+
+PAYLOADS.update({'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,
+                 'request.create':RequestCreate,'request.update':RequestUpdate,'request.cancel':Delete,
+                 'vote.set':VoteSet,'comment.create':CommentCreate,'notification.read':Delete})
 Operation = operation_type()

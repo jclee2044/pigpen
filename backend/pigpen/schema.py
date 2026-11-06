@@ -96,3 +96,24 @@ bill_occurrences = Table('bill_occurrences', metadata, *record_columns(),
     Column('expected_minor', Integer, nullable=False), Column('purchase_id', String, ForeignKey('purchases.id'), nullable=False, unique=True),
     UniqueConstraint('bill_id','due_date'))
 RESOURCES.update({'income':income_entries,'savings':savings_entries,'recurring-bills':recurring_bills,'bill-occurrences':bill_occurrences})
+
+wishlist_items = Table('wishlist_items', metadata, *record_columns(),
+    Column('owner_id', String, ForeignKey('users.id'), nullable=False), Column('name', String, nullable=False),
+    Column('price_minor', Integer, nullable=False), Column('description', String, nullable=False), Column('url', String),
+    Column('status', String, nullable=False), CheckConstraint('price_minor >= 0'),
+    CheckConstraint("status IN ('active','purchased','archived')"))
+approval_requests = Table('approval_requests', metadata, *record_columns(),
+    Column('requester_id', String, ForeignKey('users.id'), nullable=False), Column('item', String, nullable=False),
+    Column('amount_minor', Integer, nullable=False), Column('description', String, nullable=False), Column('url', String),
+    Column('category_id', String, ForeignKey('categories.id')), Column('status', String, nullable=False),
+    Column('purchase_id', String, unique=True), Column('approved_revision', Integer), CheckConstraint('amount_minor > 0'),
+    CheckConstraint("status IN ('open','canceled','purchased')"))
+approval_votes = Table('approval_votes', metadata, *record_columns(),
+    Column('request_id', String, ForeignKey('approval_requests.id'), nullable=False),
+    Column('reviewer_id', String, ForeignKey('users.id'), nullable=False), Column('approved', Boolean, nullable=False),
+    Column('request_revision', Integer, nullable=False), UniqueConstraint('request_id','reviewer_id'))
+comments = Table('comments', metadata, *record_columns(),
+    Column('actor_id', String, ForeignKey('users.id'), nullable=False), Column('target_resource', String, nullable=False),
+    Column('target_id', String, nullable=False), Column('text', String, nullable=False),
+    CheckConstraint("target_resource IN ('wishlist-items','approval-requests')"))
+RESOURCES.update({'wishlist-items':wishlist_items,'approval-requests':approval_requests,'approval-votes':approval_votes,'comments':comments})

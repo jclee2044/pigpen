@@ -13,9 +13,11 @@ from .errors import DomainError
 from .records import now, get, expect, avatar_options
 from .budget import BudgetServices
 from .finance import FinanceServices
+from .approvals import ApprovalServices
+from .notifications import NotificationServices
 
 
-class Service(BudgetServices, FinanceServices):
+class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationServices):
     def __init__(self, db):
         self.db = db
 
@@ -108,6 +110,8 @@ class Service(BudgetServices, FinanceServices):
 
     def do_category_create(self, c, op):
         data = op['data']
+        if data['kind'] == 'savings':
+            raise DomainError('category', 'Use the single shared Savings category')
         if data['kind'] == 'personal':
             if not data['parent_id'] or data['owner_id'] != op['actor_id']:
                 raise DomainError('category', 'Create Personal subcategories only under your Personal parent')
