@@ -9,6 +9,6 @@ November 6, 2026. Authorized implementation of the staged backend plan. Existing
 5. Allocations/purchases: passed (17 cumulative tests): exact integer money, month boundaries, Personal rollups, allocation copying, simultaneous duplicate retries, tombstones and optimistic revisions.
 6. Income/savings/bills: passed (19 cumulative tests): actual/expected income separation, savings without double-counting, month-end bill dates and payment retry/deduplication.
 7. Wish lists/approvals/comments: passed (22 cumulative tests): unanimous independent votes, self/stale rejection, request-edit invalidation, atomic purchase links and event-failure rollback. Durable notification creation is in the same transaction.
-8. Synchronization: pending.
+8. Synchronization: passed (26 cumulative tests): ordered per-operation results, original actor preservation, repeat replay, cursor paging, immutable revision snapshots, tombstones and archived-record recovery.
 9. Attachments/notifications/worker: pending.
 10. Recovery/deployment readiness: pending; live HTTPS and real-device push require operator configuration.
