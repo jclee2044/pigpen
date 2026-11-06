@@ -6,6 +6,7 @@ from .config import Settings
 from .errors import DomainError
 from .database import Database
 from .api import router
+from sqlalchemy.exc import OperationalError
 
 
 def create_app(settings: Settings | None = None):
@@ -17,6 +18,10 @@ def create_app(settings: Settings | None = None):
     @app.exception_handler(DomainError)
     async def domain_error(request, exc):
         return JSONResponse(exc.body(), status_code=exc.status)
+
+    @app.exception_handler(OperationalError)
+    async def storage_error(request, exc):
+        return JSONResponse(DomainError('storage_unavailable', 'Storage unavailable; verify migrations and retry', 503).body(), status_code=503)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, exc):

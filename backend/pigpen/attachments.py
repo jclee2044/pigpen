@@ -2,6 +2,8 @@ from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 import re
+import os
+import tempfile
 import warnings
 from PIL import Image, UnidentifiedImageError
 from . import schema as s
@@ -37,12 +39,28 @@ def store_image(settings,data,media_type,filename):
     digest=sha256(data).hexdigest();key=digest+extension
     settings.uploads_dir.mkdir(mode=0o700,parents=True,exist_ok=True)
     path=settings.uploads_dir/key
+    # Publish only a complete, flushed immutable object. A crash during upload
+    # can leave a temporary file, never a partial object at the final digest path.
+    temporary=None
     try:
-        with path.open('xb') as output:
+        with tempfile.NamedTemporaryFile(dir=settings.uploads_dir,prefix='.upload-',delete=False) as output:
+            temporary=Path(output.name)
             output.write(data)
-    except FileExistsError:
-        if path.is_symlink() or sha256(path.read_bytes()).hexdigest()!=digest:
-            raise DomainError('storage','Stored attachment failed its integrity check',503)
+            output.flush()
+            os.fsync(output.fileno())
+        try:
+            os.link(temporary,path)
+        except FileExistsError:
+            if path.is_symlink() or sha256(path.read_bytes()).hexdigest()!=digest:
+                raise DomainError('storage','Stored attachment failed its integrity check',503)
+        directory=os.open(settings.uploads_dir,os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     filename=Path((filename or 'image').replace('\\','/')).name
     filename=''.join(x for x in filename if x.isprintable())[:200] or 'image'+extension
     return dict(storage_key=key,filename=filename,media_type=media,byte_size=len(data),checksum=digest)

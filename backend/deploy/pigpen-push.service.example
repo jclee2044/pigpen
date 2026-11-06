@@ -1,0 +1,13 @@
+[Unit]
+Description=Process one PigPen push outbox job
+After=network.target
+
+[Service]
+Type=oneshot
+User=REPLACE_WITH_SERVICE_USER
+WorkingDirectory=/absolute/path/to/pigpen/backend
+EnvironmentFile=/absolute/private/path/pigpen.env
+ExecStart=/absolute/path/to/pigpen/backend/.venv/bin/python -m pigpen deliver-once
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true

@@ -37,6 +37,10 @@ class Database:
     def transaction(self, write=False):
         if not self.settings.database_path.is_file():
             raise DomainError('not_ready', 'Initialize storage with the migration command', 503)
+        try:
+            self.settings.verify_storage()
+        except ValueError:
+            raise DomainError('storage_environment', 'Data directory does not belong to this environment', 503) from None
         with self.engine.connect().execution_options(write=write) as conn:
             with conn.begin():
                 yield conn
@@ -53,7 +57,13 @@ class Database:
 
 
 def migrate(settings, target='head'):
+    settings.verify_storage(allow_new=True)
     settings.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        with settings.environment_marker.open('x') as marker:
+            marker.write(settings.environment+'\n')
+    except FileExistsError:
+        settings.verify_storage()
     db = Database(settings)
     # Journal selection is outside a transaction; migrations themselves are atomic.
     import sqlite3

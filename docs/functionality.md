@@ -152,3 +152,9 @@ These are working design choices, not blockers to documenting or starting the ap
 ## 11. Avatar customization assets
 
 Confirmed November 6, 2026: pig avatars support independently swappable hats, glasses, optional eyelashes, bandana colors (including no bandana), and flat background colors. The initial [layered SVG asset pack](../assets/avatars/pig-v1/README.md) includes a standalone customization preview. Its particular styles and palette are initial artwork choices. Profile UI integration, persistence, and the frontend/backend contract are not implemented by this asset work.
+
+## 12. Backend implementation decisions
+
+Confirmed during backend implementation on November 6, 2026: use USD and America/New_York, copy prior-month allocations without carrying unused funds forward, allocate Personal allowances only on parent categories, and require approval from every other active household profile. These confirmations supersede the earlier corresponding proposals, including the one-reviewer approval proposal in section 7. All other proposed behavior retains its stated status.
+
+The actual financial database and its attachments/backups/private configuration must be separate from the source checkout and GitHub. The backend enforces external runtime paths and separate environment registration. See [implemented API contract](backend-api.md), [operations and recovery](backend-operations.md), and [verification gates](backend-progress.md). Profile avatar choices are persisted by the API; frontend integration remains future work.

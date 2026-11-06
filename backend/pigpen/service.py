@@ -1,15 +1,11 @@
 """Application services own transactions; HTTP handlers never implement rules."""
-from datetime import datetime, timezone
 from hashlib import sha256
 import json
-from pathlib import Path
-from uuid import uuid4, uuid5, NAMESPACE_URL
+from uuid import uuid5, NAMESPACE_URL
 from sqlalchemy import select, insert, update, func
 from sqlalchemy.exc import IntegrityError, OperationalError
 from . import schema as s
 from .errors import DomainError
-
-
 from .records import now, get, expect, avatar_options
 from .budget import BudgetServices
 from .finance import FinanceServices
@@ -106,8 +102,9 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
         if not data['active'] and c.execute(select(func.count()).select_from(s.users).where(s.users.c.active == True)).scalar() <= 1:
             raise DomainError('last_profile', 'Keep at least one active profile', 409)
         record = self.save(c, s.users, {**data, 'name_key': data['name'].casefold()}, row)
-        for category in c.execute(select(s.categories).where(s.categories.c.owner_id == row['id'])).mappings():
-            self.save(c, s.categories, {'active': data['active']}, dict(category))
+        if row['active'] != data['active']:
+            for category in c.execute(select(s.categories).where(s.categories.c.owner_id == row['id'])).mappings():
+                self.save(c, s.categories, {'active': data['active']}, dict(category))
         return record
 
     def do_category_create(self, c, op):

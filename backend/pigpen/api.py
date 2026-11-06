@@ -1,11 +1,9 @@
-from typing import Literal
 from fastapi import APIRouter, Query, Form, File, UploadFile
 from fastapi.responses import FileResponse
 from uuid import UUID, uuid5, NAMESPACE_URL
-from datetime import datetime
 from sqlalchemy import select
 from .contracts import Operation, Model, AttachmentOperation, AttachmentDeleteOperation
-from pydantic import Field
+from pydantic import Field, AwareDatetime
 from . import sync
 from .domain import month_bounds
 from .attachments import MAX_UPLOAD, store_image, attachment_path
@@ -40,7 +38,7 @@ def router(db):
 
     @routes.post('/purchases/{purchase_id}/attachments')
     def upload(purchase_id: UUID, operation_id: UUID = Form(...), actor_id: UUID = Form(...),
-               client_time: datetime = Form(...), file: UploadFile = File(...)):
+               client_time: AwareDatetime = Form(...), file: UploadFile = File(...)):
         with db.transaction() as c:
             get(c,s.purchases,purchase_id)
             get(c,s.users,actor_id,active=True)
@@ -69,7 +67,7 @@ def router(db):
                             headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
 
     @routes.delete('/attachments/{identifier}')
-    def attachment_delete(identifier: UUID, operation_id: UUID, actor_id: UUID, client_time: datetime,
+    def attachment_delete(identifier: UUID, operation_id: UUID, actor_id: UUID, client_time: AwareDatetime,
                           expected_revision: int = Query(...,ge=1)):
         operation=AttachmentDeleteOperation(operation_id=operation_id,entity_id=identifier,actor_id=actor_id,
                                             client_time=client_time,data={'expected_revision':expected_revision})

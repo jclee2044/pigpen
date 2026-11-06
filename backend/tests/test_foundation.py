@@ -22,3 +22,8 @@ def test_missing_configuration_never_falls_back_to_production(monkeypatch):
     monkeypatch.delenv('PIGPEN_DATA_DIR', raising=False)
     with pytest.raises(ValueError, match='explicitly'):
         Settings.from_env()
+
+
+def test_existing_file_cannot_be_configured_as_data_directory(tmp_path):
+    path=tmp_path/'file';path.write_text('not a directory')
+    with pytest.raises(ValueError,match='directory'):Settings(path)

@@ -89,3 +89,11 @@ def test_unsafe_push_endpoint_rejected(client,users):
     response=client.post('/api/v1/operations',json=op)
     assert response.status_code==422
     assert 'private' not in str(response.json())
+
+
+def test_upload_requires_timezone_aware_timestamp_before_storing(client,users,settings):
+    actor=users[0]['id'];p=purchase(client,actor)
+    form=dict(operation_id=str(uuid4()),actor_id=actor,client_time='2026-11-06T12:00:00')
+    result=client.post(f"/api/v1/purchases/{p['id']}/attachments",data=form,files={'file':('image.png',png(),'image/png')})
+    assert result.status_code==422
+    assert not settings.uploads_dir.exists()

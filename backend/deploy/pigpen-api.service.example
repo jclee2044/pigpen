@@ -1,0 +1,18 @@
+# Example only. Installing users/services is a separate operator action.
+[Unit]
+Description=PigPen API
+After=network.target
+
+[Service]
+Type=simple
+User=REPLACE_WITH_SERVICE_USER
+WorkingDirectory=/absolute/path/to/pigpen/backend
+EnvironmentFile=/absolute/private/path/pigpen.env
+ExecStart=/absolute/path/to/pigpen/backend/.venv/bin/python -m pigpen serve --host 127.0.0.1 --port 8000
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

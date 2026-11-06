@@ -163,3 +163,11 @@ Implementation should verify behavior at the boundaries where mistakes affect sh
 - Mobile/desktop layouts, keyboard interaction, PWA installation, offline reopening, image upload limits, and a complete backup restore.
 
 Version 1 is complete when these workflows run against the home server on the intended mobile and desktop devices. Automated tests should focus on domain calculations, synchronization, and approval consistency; browser checks cover installation, permission prompts, responsive layouts, and real push delivery.
+
+## 11. Implemented backend checkpoint
+
+The user authorized backend implementation after the initial scaffold. The backend now uses synchronous SQLAlchemy with versioned Alembic migrations, a shared typed operation executor for online/offline writes, immutable change snapshots, atomic event/outbox recording, decoded immutable attachments, and a leased database-backed push worker. Public writes use `/api/v1/operations`; the earlier API table remains an architectural proposal, with the implemented wire shape defined in [backend-api.md](backend-api.md).
+
+Financial runtime data is required to reside outside the Git checkout. Environment markers prevent development/tests from opening production-registered storage. Backups use SQLite's online backup API plus referenced immutable objects; restore validates checksums and refuses to overwrite an existing destination. [Operations instructions](backend-operations.md) describe explicit migration/startup/recovery commands. Deployment templates are examples only: no machine services, certificates, production data directories or backup jobs were installed.
+
+USD, America/New_York, allocation copying without carryover, Personal parent-only allocations and unanimous approval by the other active profiles are confirmed. Other product defaults remain revisable. Frontend integration, actual HTTPS/device checks and real push delivery are not claimed by this backend checkpoint.

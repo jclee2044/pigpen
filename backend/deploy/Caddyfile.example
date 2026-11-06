@@ -1,0 +1,12 @@
+# Choose the real hostname/certificate method first. Do not expose household data publicly.
+REPLACE_WITH_HOUSEHOLD_HOSTNAME {
+    @backend path /api/* /openapi.json /docs /docs/* /redoc
+    handle @backend {
+        reverse_proxy 127.0.0.1:8000
+    }
+    handle {
+        root * /absolute/path/to/pigpen/frontend/dist
+        try_files {path} /index.html
+        file_server
+    }
+}

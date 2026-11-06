@@ -1,6 +1,4 @@
 from uuid import uuid5, NAMESPACE_URL
-from zoneinfo import ZoneInfo
-from datetime import datetime
 from sqlalchemy import select
 from . import schema as s
 from .records import get, expect
@@ -16,8 +14,8 @@ class BudgetServices:
         def rows(table):
             return list(c.execute(select(table)).mappings())
         result = budget_summary(month, rows(s.categories), allocations, rows(s.purchases),
-                                rows(s.income_entries) if hasattr(s,'income_entries') else [],
-                                rows(s.savings_entries) if hasattr(s,'savings_entries') else [],
+                                rows(s.income_entries),
+                                rows(s.savings_entries),
                                 budget['expected_income_minor'] if budget else 0)
         result['budget'] = dict(budget) if budget else None
         return result
@@ -72,8 +70,6 @@ class BudgetServices:
             get(c,s.categories,cat['parent_id'],active=True)
         request_revision=data.pop('request_revision',None)
         if data['request_id'] and not current:
-            if not hasattr(self,'link_request'):
-                raise DomainError('request','Request linking not available')
             self.link_request(c, data['request_id'], request_revision, op)
         elif current and data['request_id'] != current['request_id']:
             raise DomainError('request','A purchase approval link cannot be reassigned')
@@ -82,25 +78,25 @@ class BudgetServices:
     def do_purchase_create(self,c,op):
         data=self.purchase_values(c,op)
         result=self.save(c,s.purchases,dict(id=op['entity_id'],purchaser_id=op['actor_id'],**data,bill_id=None,bill_due=None))
-        self.spending_alerts(c,result['transaction_date'][:7],op)
+        self.spending_alerts(c,result['transaction_date'][:7],op,result['category_id'])
         return result
 
     def do_purchase_update(self,c,op):
         current=get(c,s.purchases,op['entity_id']); expect(current,op['data']['expected_revision'])
         data=self.purchase_values(c,op,current)
         result=self.save(c,s.purchases,data,current)
-        self.spending_alerts(c,result['transaction_date'][:7],op)
+        self.spending_alerts(c,result['transaction_date'][:7],op,result['category_id'])
         return result
 
     def do_purchase_delete(self,c,op):
         current=get(c,s.purchases,op['entity_id']); expect(current,op['data']['expected_revision'])
         return self.save(c,s.purchases,{'deleted':True},current)
 
-    def spending_alerts(self,c,month,op):
-        if not hasattr(self,'notify'):
-            return
+    def spending_alerts(self,c,month,op,category_id):
+        category=get(c,s.categories,category_id)
+        target=category['parent_id'] or category['id']
         for row in self.summary(c,month)['categories']:
-            if row['kind']=='savings' or row['actual_minor']<=0:
+            if row['category_id']!=target or row['kind']=='savings' or row['actual_minor']<=0:
                 continue
             for suffix,hit in [('reached',row['actual_minor']>=row['allocated_minor']),('exceeded',row['actual_minor']>row['allocated_minor'])]:
                 if hit:

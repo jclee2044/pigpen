@@ -1,0 +1,11 @@
+# Process one job every five seconds; later runs retry persisted failures.
+[Unit]
+Description=Schedule PigPen push delivery
+
+[Timer]
+OnBootSec=15s
+OnUnitInactiveSec=5s
+Unit=pigpen-push.service
+
+[Install]
+WantedBy=timers.target

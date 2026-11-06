@@ -73,3 +73,28 @@ npm run preview
 No FastAPI application entry point or route exists yet, so there is no backend development server command to run. TODO: document the actual entry point and JSON contract when backend implementation is authorized. Node runs the Vite development tool only; deployment will serve built static assets.
 
 See [the staged setup record](docs/setup.md) for outcomes, command evidence, created files, and remaining Git work.
+
+## Implemented backend
+
+The scaffold sections above are retained as the setup record. Backend implementation is now available: profiles/categories, budgets/purchases, income/savings/bills, wish lists/approvals/comments, synchronization, attachments, notifications and a durable push worker. Frontend integration remains separate work.
+
+- [Backend API contract and confirmed decisions](docs/backend-api.md)
+- [Backend setup, development, private storage, backup/restore and deployment examples](docs/backend-operations.md)
+- [Implementation gates and verification evidence](docs/backend-progress.md)
+
+Actual financial databases, image uploads, secrets and backups belong **outside this Git checkout**. The backend requires explicit paths and rejects cross-environment database access; GitHub receives source, migrations, dependency locks and synthetic tests.
+
+```sh
+# From the project root:
+backend/.venv/bin/python -m pip --no-cache-dir install -r backend/requirements.txt -c backend/requirements.lock
+backend/.venv/bin/python -m pytest -q backend/tests
+# For development, select a new external location explicitly:
+cd backend
+export PIGPEN_ENV=development
+export PIGPEN_DATA_DIR="$HOME/.local/share/pigpen-development"
+.venv/bin/python -m pigpen migrate
+.venv/bin/python -m pigpen check
+.venv/bin/python -m pigpen serve
+```
+
+The server defaults to localhost:8000; `/docs` describes the typed API and `/api/v1/health` reports readiness. Use synthetic data during development. No production database, machine service, HTTPS configuration or real push delivery was created by this implementation.

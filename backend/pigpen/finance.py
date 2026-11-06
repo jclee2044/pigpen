@@ -64,7 +64,7 @@ class FinanceServices:
             purchase=self.save(c,s.purchases,dict(id=op['entity_id'],purchaser_id=op['actor_id'],category_id=bill['category_id'],
                 item=bill['name'],amount_minor=data['amount_minor'] or bill['amount_minor'],transaction_date=data['transaction_date'],
                 merchant=None,description=bill['description'],request_id=None,bill_id=bill['id'],bill_due=due))
-            self.spending_alerts(c,purchase['transaction_date'][:7],op)
+            self.spending_alerts(c,purchase['transaction_date'][:7],op,purchase['category_id'])
         self.save(c,s.bill_occurrences,dict(id=str(uuid5(NAMESPACE_URL,bill['id']+'/'+due)),bill_id=bill['id'],due_date=due,
             expected_minor=bill['amount_minor'],purchase_id=purchase['id']))
         return purchase
@@ -74,10 +74,10 @@ class FinanceServices:
         paid={r['bill_id']:dict(r) for r in c.execute(select(s.bill_occurrences).where(s.bill_occurrences.c.due_date.like(month+'-%'))).mappings()}
         items=[]
         for bill in c.execute(select(s.recurring_bills).where(s.recurring_bills.c.deleted==False)).mappings():
-            due=due_date(month,bill['due_day'])
-            if due<bill['start_date'] or (not bill['active'] and bill['id'] not in paid):
-                continue
             occurrence=paid.get(bill['id'])
+            due=occurrence['due_date'] if occurrence else due_date(month,bill['due_day'])
+            if not occurrence and (due<bill['start_date'] or not bill['active']):
+                continue
             items.append(dict(id=str(uuid5(NAMESPACE_URL,bill['id']+'/'+due)),bill_id=bill['id'],name=bill['name'],due_date=due,
                               expected_minor=occurrence['expected_minor'] if occurrence else bill['amount_minor'],
                               purchase_id=occurrence['purchase_id'] if occurrence else None))

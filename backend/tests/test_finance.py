@@ -32,3 +32,14 @@ def test_month_end_bill_paid_once(client,users):
     assert client.post('/api/v1/operations',json=op).status_code==409
     assert len(client.get('/api/v1/purchases').json()['items'])==1
     assert client.get('/api/v1/budget-months/2026-02').json()['spent_minor']==10000
+
+
+def test_bill_edits_preserve_recorded_occurrence_dates(client,users):
+    actor=users[0]['id'];category=next(x for x in client.get('/api/v1/categories').json()['items'] if x['name']=='Housing')
+    bill=submit(client,'bill.create',dict(name='Rent',amount_minor=10000,category_id=category['id'],due_day=31,start_date='2026-01-01'),actor)
+    payment=submit(client,'bill.pay',dict(bill_id=bill['id'],due_date='2026-02-28',transaction_date='2026-02-28'),actor)
+    submit(client,'bill.update',dict(name='Updated rent',amount_minor=12000,category_id=category['id'],due_day=15,
+        start_date='2026-03-01',active=False,expected_revision=1),actor,bill['id'])
+    occurrence=client.get('/api/v1/bill-occurrences?month=2026-02').json()['items'][0]
+    assert occurrence['due_date']=='2026-02-28'
+    assert occurrence['expected_minor']==10000 and occurrence['purchase_id']==payment['id']
