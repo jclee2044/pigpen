@@ -148,3 +148,7 @@ The user confirmed the main requirements. The following unanswered details have 
 6. Attachment limits/retention, backup retention, and home-network versus remote access.
 
 These are working design choices, not blockers to documenting or starting the app. Receipt extraction and LLM advice remain explicitly deferred.
+
+## 11. Avatar customization assets
+
+Confirmed November 6, 2026: pig avatars support independently swappable hats, glasses, optional eyelashes, bandana colors (including no bandana), and flat background colors. The initial [layered SVG asset pack](../assets/avatars/pig-v1/README.md) includes a standalone customization preview. Its particular styles and palette are initial artwork choices. Profile UI integration, persistence, and the frontend/backend contract are not implemented by this asset work.

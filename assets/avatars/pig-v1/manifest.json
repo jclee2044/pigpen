@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "viewBox": [
+    0,
+    0,
+    512,
+    512
+  ],
+  "layerOrder": [
+    "background",
+    "base",
+    "bandana",
+    "eyelashes",
+    "glasses",
+    "hat"
+  ],
+  "base": {
+    "id": "pig",
+    "label": "Pig",
+    "file": "base/pig.svg"
+  },
+  "groups": {
+    "background": [
+      {
+        "id": "cream",
+        "label": "Cream",
+        "file": "background/cream.svg",
+        "color": "#fff1d8"
+      },
+      {
+        "id": "sage",
+        "label": "Sage",
+        "file": "background/sage.svg",
+        "color": "#cadfc9"
+      },
+      {
+        "id": "sky",
+        "label": "Sky",
+        "file": "background/sky.svg",
+        "color": "#c7e5f4"
+      },
+      {
+        "id": "lilac",
+        "label": "Lilac",
+        "file": "background/lilac.svg",
+        "color": "#ddd1ef"
+      },
+      {
+        "id": "peach",
+        "label": "Peach",
+        "file": "background/peach.svg",
+        "color": "#f8d3bd"
+      },
+      {
+        "id": "rose",
+        "label": "Rose",
+        "file": "background/rose.svg",
+        "color": "#f4cbd7"
+      },
+      {
+        "id": "butter",
+        "label": "Butter",
+        "file": "background/butter.svg",
+        "color": "#f6e59e"
+      },
+      {
+        "id": "slate",
+        "label": "Slate",
+        "file": "background/slate.svg",
+        "color": "#8192aa"
+      }
+    ],
+    "bandana": [
+      {
+        "id": "none",
+        "label": "No bandana",
+        "file": null
+      },
+      {
+        "id": "grass",
+        "label": "Grass",
+        "file": "bandana/grass.svg",
+        "color": "#49852e"
+      },
+      {
+        "id": "teal",
+        "label": "Teal",
+        "file": "bandana/teal.svg",
+        "color": "#248b88"
+      },
+      {
+        "id": "blue",
+        "label": "Blue",
+        "file": "bandana/blue.svg",
+        "color": "#407bb7"
+      },
+      {
+        "id": "purple",
+        "label": "Purple",
+        "file": "bandana/purple.svg",
+        "color": "#865aa7"
+      },
+      {
+        "id": "coral",
+        "label": "Coral",
+        "file": "bandana/coral.svg",
+        "color": "#d65b62"
+      },
+      {
+        "id": "gold",
+        "label": "Gold",
+        "file": "bandana/gold.svg",
+        "color": "#dca53c"
+      },
+      {
+        "id": "rose",
+        "label": "Rose",
+        "file": "bandana/rose.svg",
+        "color": "#bd5e8b"
+      },
+      {
+        "id": "charcoal",
+        "label": "Charcoal",
+        "file": "bandana/charcoal.svg",
+        "color": "#4e5665"
+      }
+    ],
+    "hat": [
+      {
+        "id": "none",
+        "label": "No hat",
+        "file": null
+      },
+      {
+        "id": "beanie",
+        "label": "Beanie",
+        "file": "hat/beanie.svg"
+      },
+      {
+        "id": "baseball-cap",
+        "label": "Baseball Cap",
+        "file": "hat/baseball-cap.svg"
+      },
+      {
+        "id": "bucket-hat",
+        "label": "Bucket Hat",
+        "file": "hat/bucket-hat.svg"
+      },
+      {
+        "id": "party-hat",
+        "label": "Party Hat",
+        "file": "hat/party-hat.svg"
+      },
+      {
+        "id": "crown",
+        "label": "Crown",
+        "file": "hat/crown.svg"
+      },
+      {
+        "id": "beret",
+        "label": "Beret",
+        "file": "hat/beret.svg"
+      }
+    ],
+    "glasses": [
+      {
+        "id": "none",
+        "label": "No glasses",
+        "file": null
+      },
+      {
+        "id": "round",
+        "label": "Round",
+        "file": "glasses/round.svg"
+      },
+      {
+        "id": "square",
+        "label": "Square",
+        "file": "glasses/square.svg"
+      },
+      {
+        "id": "sunglasses",
+        "label": "Sunglasses",
+        "file": "glasses/sunglasses.svg"
+      },
+      {
+        "id": "cat-eye",
+        "label": "Cat Eye",
+        "file": "glasses/cat-eye.svg"
+      },
+      {
+        "id": "monocle",
+        "label": "Monocle",
+        "file": "glasses/monocle.svg"
+      }
+    ],
+    "eyelashes": [
+      {
+        "id": "none",
+        "label": "No eyelashes",
+        "file": null
+      },
+      {
+        "id": "classic",
+        "label": "Eyelashes",
+        "file": "eyelashes/classic.svg"
+      }
+    ]
+  },
+  "default": {
+    "background": "cream",
+    "bandana": "grass",
+    "glasses": "none",
+    "hat": "none",
+    "eyelashes": "none"
+  }
+}
