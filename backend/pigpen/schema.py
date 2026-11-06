@@ -117,3 +117,20 @@ comments = Table('comments', metadata, *record_columns(),
     Column('target_id', String, nullable=False), Column('text', String, nullable=False),
     CheckConstraint("target_resource IN ('wishlist-items','approval-requests')"))
 RESOURCES.update({'wishlist-items':wishlist_items,'approval-requests':approval_requests,'approval-votes':approval_votes,'comments':comments})
+
+attachments = Table('attachments', metadata, *record_columns(),
+    Column('purchase_id', String, ForeignKey('purchases.id'), nullable=False),
+    Column('uploader_id', String, ForeignKey('users.id'), nullable=False), Column('storage_key', String, nullable=False),
+    Column('filename', String, nullable=False), Column('media_type', String, nullable=False),
+    Column('byte_size', Integer, nullable=False), Column('checksum', String, nullable=False))
+installations = Table('installations', metadata, *record_columns(),
+    Column('user_id', String, ForeignKey('users.id'), nullable=False))
+subscriptions = Table('subscriptions', metadata, *record_columns(),
+    Column('installation_id', String, ForeignKey('installations.id'), nullable=False, unique=True),
+    Column('endpoint', String, nullable=False, unique=True), Column('p256dh', String, nullable=False),
+    Column('auth', String, nullable=False), Column('active', Boolean, nullable=False))
+push_deliveries = Table('push_deliveries', metadata,
+    Column('id', String, primary_key=True), Column('notification_id', String, ForeignKey('notifications.id'), nullable=False),
+    Column('subscription_id', String, ForeignKey('subscriptions.id'), nullable=False), Column('binding_revision', Integer, nullable=False),
+    Column('delivered_at', String, nullable=False), UniqueConstraint('notification_id','subscription_id','binding_revision'))
+RESOURCES.update({'attachments':attachments})

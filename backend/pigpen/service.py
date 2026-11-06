@@ -15,9 +15,11 @@ from .budget import BudgetServices
 from .finance import FinanceServices
 from .approvals import ApprovalServices
 from .notifications import NotificationServices
+from .attachments import AttachmentServices
+from .push import PushServices
 
 
-class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationServices):
+class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationServices, AttachmentServices, PushServices):
     def __init__(self, db):
         self.db = db
 

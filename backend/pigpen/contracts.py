@@ -199,4 +199,36 @@ class CommentCreate(Model):
 PAYLOADS.update({'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,
                  'request.create':RequestCreate,'request.update':RequestUpdate,'request.cancel':Delete,
                  'vote.set':VoteSet,'comment.create':CommentCreate,'notification.read':Delete})
+class InstallationSelect(Model):
+    expected_revision: Annotated[StrictInt, Field(ge=0)] = 0
+
+
+class SubscriptionSet(Model):
+    installation_id: UUID
+    expected_revision: Annotated[StrictInt, Field(ge=0)] = 0
+    endpoint: HttpUrl
+    p256dh: Annotated[str, Field(max_length=200)]
+    auth: Annotated[str, Field(max_length=100)]
+
+
+class AttachmentCreate(Model):
+    purchase_id: UUID
+    storage_key: str
+    filename: str
+    media_type: str
+    byte_size: PositiveMoney
+    checksum: str
+
+
+class AttachmentOperation(Envelope):
+    kind: Literal['attachment.create'] = 'attachment.create'
+    data: AttachmentCreate
+
+
+class AttachmentDeleteOperation(Envelope):
+    kind: Literal['attachment.delete'] = 'attachment.delete'
+    data: Delete
+
+
+PAYLOADS.update({'installation.select':InstallationSelect,'subscription.set':SubscriptionSet,'subscription.disable':Delete})
 Operation = operation_type()

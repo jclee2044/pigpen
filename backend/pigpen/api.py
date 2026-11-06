@@ -1,10 +1,14 @@
 from typing import Literal
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Form, File, UploadFile
+from fastapi.responses import FileResponse
+from uuid import UUID, uuid5, NAMESPACE_URL
+from datetime import datetime
 from sqlalchemy import select
-from .contracts import Operation, Model
+from .contracts import Operation, Model, AttachmentOperation, AttachmentDeleteOperation
 from pydantic import Field
 from . import sync
 from .domain import month_bounds
+from .attachments import MAX_UPLOAD, store_image, attachment_path
 from .service import Service, get, avatar_options
 from . import schema as s
 from .errors import DomainError
@@ -33,6 +37,50 @@ def router(db):
     @routes.get('/sync/snapshot')
     def sync_snapshot():
         return sync.snapshot(db)
+
+    @routes.post('/purchases/{purchase_id}/attachments')
+    def upload(purchase_id: UUID, operation_id: UUID = Form(...), actor_id: UUID = Form(...),
+               client_time: datetime = Form(...), file: UploadFile = File(...)):
+        with db.transaction() as c:
+            get(c,s.purchases,purchase_id)
+            get(c,s.users,actor_id,active=True)
+        try:
+            data=file.file.read(MAX_UPLOAD+1)
+        finally:
+            file.file.close()
+        metadata=store_image(db.settings,data,file.content_type,file.filename)
+        operation=AttachmentOperation(operation_id=operation_id,entity_id=uuid5(NAMESPACE_URL,str(purchase_id)+'/'+str(operation_id)),
+            actor_id=actor_id,client_time=client_time,data={'purchase_id':purchase_id,**metadata})
+        return service.execute(operation)
+
+    @routes.get('/purchases/{purchase_id}/attachments')
+    def attachment_list(purchase_id: UUID):
+        with db.transaction() as c:
+            get(c,s.purchases,purchase_id)
+            return {'items':[dict(r) for r in c.execute(select(s.attachments).where(s.attachments.c.purchase_id==str(purchase_id),s.attachments.c.deleted==False)).mappings()]}
+
+    @routes.get('/attachments/{identifier}/content')
+    def attachment_content(identifier: UUID):
+        with db.transaction() as c:
+            record=get(c,s.attachments,identifier)
+            get(c,s.purchases,record['purchase_id'])
+            path=attachment_path(db.settings,record)
+        return FileResponse(path,media_type=record['media_type'],filename=record['filename'],content_disposition_type='attachment',
+                            headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
+
+    @routes.delete('/attachments/{identifier}')
+    def attachment_delete(identifier: UUID, operation_id: UUID, actor_id: UUID, client_time: datetime,
+                          expected_revision: int = Query(...,ge=1)):
+        operation=AttachmentDeleteOperation(operation_id=operation_id,entity_id=identifier,actor_id=actor_id,
+                                            client_time=client_time,data={'expected_revision':expected_revision})
+        return service.execute(operation)
+
+    @routes.get('/installations/{identifier}')
+    def installation_detail(identifier: UUID):
+        with db.transaction() as c:
+            installation=get(c,s.installations,identifier)
+            subscription=c.execute(select(s.subscriptions).where(s.subscriptions.c.installation_id==str(identifier))).mappings().first()
+            return {'installation':installation,'subscription':{k:subscription[k] for k in ['id','revision','active']} if subscription else None}
 
     @routes.get('/household')
     def household():

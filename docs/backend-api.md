@@ -40,7 +40,7 @@ Updates/deletes require `expected_revision`. Votes additionally require `request
 
 ## Attachments and notifications
 
-`POST /purchases/{id}/attachments` is multipart (`operation_id`, `actor_id`, `file`). The server validates decoded image format/size, generates the storage name and checksum, and returns metadata. GET `/purchases/{id}/attachments`, GET `/attachments/{id}/content`, and DELETE `/attachments/{id}?operation_id=...&actor_id=...&expected_revision=...` manage attachment metadata. No offline upload guarantee. Filenames are never used as paths. Deleted/orphaned files are retained until an explicit future cleanup policy so backups cannot lose referenced objects.
+`POST /purchases/{id}/attachments` is multipart (`operation_id`, `actor_id`, timezone-aware `client_time`, `file`). The server validates decoded image format/size, generates the storage name and checksum, and returns metadata. GET `/purchases/{id}/attachments`, GET `/attachments/{id}/content`, and DELETE `/attachments/{id}?operation_id=...&actor_id=...&expected_revision=...&client_time=...` manage attachment metadata. No offline upload guarantee. Filenames are never used as paths. Deleted/orphaned files are retained until an explicit future cleanup policy so backups cannot lose referenced objects.
 
 Notifications are created from committed changes. The outbox stores recipient IDs; delivery rechecks the current installation/profile binding. Minimal push payloads contain only a notification ID and app link. The worker retries transient failures, disables expired subscriptions and persists attempts; HTTP push is at-least-once, and clients should replace displayed notifications using the stable notification ID as a tag.
 
