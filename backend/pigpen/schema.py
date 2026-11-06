@@ -43,3 +43,16 @@ outbox = Table('outbox', metadata,
     Column('lease_until', String), Column('lease_token', String), Column('last_error', String))
 
 RESOURCES = {'household': households, 'notifications': notifications}
+
+users = Table('users', metadata, *record_columns(),
+    Column('name', String, nullable=False), Column('name_key', String, nullable=False, unique=True),
+    Column('avatar', JSON, nullable=False), Column('active', Boolean, nullable=False))
+categories = Table('categories', metadata, *record_columns(),
+    Column('name', String, nullable=False), Column('kind', String, nullable=False),
+    Column('owner_id', String, ForeignKey('users.id')), Column('parent_id', String, ForeignKey('categories.id')),
+    Column('active', Boolean, nullable=False),
+    CheckConstraint("kind IN ('expense','personal','savings')"),
+    CheckConstraint("(kind = 'personal' AND owner_id IS NOT NULL) OR (kind != 'personal' AND owner_id IS NULL AND parent_id IS NULL)"))
+Index('one_personal_parent', categories.c.owner_id, unique=True,
+      sqlite_where=(categories.c.kind == 'personal') & categories.c.parent_id.is_(None))
+RESOURCES.update({'users': users, 'categories': categories})
