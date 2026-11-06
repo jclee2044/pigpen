@@ -4,7 +4,7 @@ November 6, 2026. Authorized implementation of the staged backend plan. Existing
 
 1. Contract and immediate decisions: documented in backend-api.md; user confirmed currency/timezone/month rules and unanimous approval by other active profiles.
 2. Application/configuration: passed (5 tests). TestClient hangs under restricted event-loop/thread execution; the identical suite passes with normal sandbox escalation. No runtime data created on import/startup.
-3. SQLite/migrations/recovery: pending.
+3. SQLite/migrations: passed (6 cumulative tests): explicit migration, repeat migration, foreign keys/WAL/busy timeout, transaction rollback. Recovery follows the attachment stage.
 4. Profiles/categories: pending.
 5. Allocations/purchases: pending.
 6. Income/savings/bills: pending.

@@ -4,12 +4,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from .config import Settings
 from .errors import DomainError
+from .database import Database
 
 
 def create_app(settings: Settings | None = None):
     settings = settings or Settings.from_env()
     app = FastAPI(title="PigPen API", version="1.0.0")
     app.state.settings = settings
+    app.state.database = Database(settings)
 
     @app.exception_handler(DomainError)
     async def domain_error(request, exc):
@@ -23,6 +25,7 @@ def create_app(settings: Settings | None = None):
 
     @app.get("/api/v1/health")
     def health():
-        return {"status": "ok", "database": "not_initialized"}
+        ready = app.state.database.ready()
+        return JSONResponse({"status": "ok" if ready else "not_ready"}, status_code=200 if ready else 503)
 
     return app
