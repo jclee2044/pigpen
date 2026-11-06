@@ -45,6 +45,11 @@ def router(db):
         with db.transaction() as c:
             return service.summary(c, month)
 
-    for resource in ('users', 'categories', 'notifications', 'purchases'):
+    @routes.get('/bill-occurrences')
+    def bills(month: str):
+        with db.transaction() as c:
+            return {'items': service.upcoming_bills(c, month)}
+
+    for resource in ('users', 'categories', 'notifications', 'purchases', 'income', 'savings', 'recurring-bills'):
         routes.add_api_route('/'+resource, collection(resource), methods=['GET'], name='list_'+resource)
     return routes

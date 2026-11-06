@@ -7,7 +7,7 @@ November 6, 2026. Authorized implementation of the staged backend plan. Existing
 3. SQLite/migrations: passed (6 cumulative tests): explicit migration, repeat migration, foreign keys/WAL/busy timeout, transaction rollback. Recovery follows the attachment stage.
 4. Profiles/categories: passed (9 cumulative tests): atomic profile/Personal creation, avatar options, duplicate retries/names, invalid nesting and migration preservation.
 5. Allocations/purchases: passed (17 cumulative tests): exact integer money, month boundaries, Personal rollups, allocation copying, simultaneous duplicate retries, tombstones and optimistic revisions.
-6. Income/savings/bills: pending.
+6. Income/savings/bills: passed (19 cumulative tests): actual/expected income separation, savings without double-counting, month-end bill dates and payment retry/deduplication.
 7. Wish lists/approvals/comments: pending.
 8. Synchronization: pending.
 9. Attachments/notifications/worker: pending.

@@ -12,9 +12,10 @@ from .errors import DomainError
 
 from .records import now, get, expect, avatar_options
 from .budget import BudgetServices
+from .finance import FinanceServices
 
 
-class Service(BudgetServices):
+class Service(BudgetServices, FinanceServices):
     def __init__(self, db):
         self.db = db
 

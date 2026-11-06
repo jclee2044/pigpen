@@ -117,4 +117,46 @@ class Delete(Model):
 
 PAYLOADS.update({'budget.set': BudgetSet, 'purchase.create': PurchaseCreate,
                  'purchase.update': PurchaseUpdate, 'purchase.delete': Delete})
+class IncomeCreate(Model):
+    description: Text
+    amount_minor: PositiveMoney
+    transaction_date: date
+
+
+class IncomeUpdate(IncomeCreate):
+    expected_revision: Revision
+
+
+class SavingsCreate(Model):
+    kind: Literal['opening', 'contribution', 'withdrawal']
+    amount_minor: Money
+    transaction_date: date
+    description: Description = ''
+
+
+class BillCreate(Model):
+    name: Text
+    amount_minor: PositiveMoney
+    category_id: UUID
+    due_day: Annotated[StrictInt, Field(ge=1, le=31)]
+    start_date: date
+    description: Description = ''
+
+
+class BillUpdate(BillCreate):
+    expected_revision: Revision
+    active: StrictBool = True
+
+
+class BillPay(Model):
+    bill_id: UUID
+    due_date: date
+    transaction_date: date
+    amount_minor: PositiveMoney | None = None
+    purchase_id: UUID | None = None
+
+
+PAYLOADS.update({'income.create':IncomeCreate,'income.update':IncomeUpdate,'income.delete':Delete,
+                 'savings.create':SavingsCreate,'savings.delete':Delete,
+                 'bill.create':BillCreate,'bill.update':BillUpdate,'bill.pay':BillPay})
 Operation = operation_type()

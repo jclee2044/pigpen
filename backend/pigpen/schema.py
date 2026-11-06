@@ -74,3 +74,25 @@ purchases = Table('purchases', metadata, *record_columns(),
     CheckConstraint('amount_minor > 0'), UniqueConstraint('bill_id', 'bill_due'))
 Index('purchases_month_category', purchases.c.transaction_date, purchases.c.category_id)
 RESOURCES.update({'budget-months': budget_months, 'allocations': allocations, 'purchases': purchases})
+
+income_entries = Table('income_entries', metadata, *record_columns(),
+    Column('user_id', String, ForeignKey('users.id'), nullable=False), Column('description', String, nullable=False),
+    Column('amount_minor', Integer, nullable=False), Column('transaction_date', String, nullable=False),
+    CheckConstraint('amount_minor > 0'))
+savings_entries = Table('savings_entries', metadata, *record_columns(),
+    Column('user_id', String, ForeignKey('users.id'), nullable=False), Column('kind', String, nullable=False),
+    Column('amount_minor', Integer, nullable=False), Column('transaction_date', String, nullable=False), Column('description', String, nullable=False),
+    CheckConstraint("kind IN ('opening','contribution','withdrawal')"), CheckConstraint('amount_minor >= 0'))
+Index('one_savings_opening', savings_entries.c.household_id, unique=True,
+      sqlite_where=(savings_entries.c.kind=='opening') & (savings_entries.c.deleted==False))
+recurring_bills = Table('recurring_bills', metadata, *record_columns(),
+    Column('name', String, nullable=False), Column('amount_minor', Integer, nullable=False),
+    Column('category_id', String, ForeignKey('categories.id'), nullable=False),
+    Column('due_day', Integer, nullable=False), Column('start_date', String, nullable=False),
+    Column('description', String, nullable=False), Column('active', Boolean, nullable=False),
+    CheckConstraint('amount_minor > 0'), CheckConstraint('due_day BETWEEN 1 AND 31'))
+bill_occurrences = Table('bill_occurrences', metadata, *record_columns(),
+    Column('bill_id', String, ForeignKey('recurring_bills.id'), nullable=False), Column('due_date', String, nullable=False),
+    Column('expected_minor', Integer, nullable=False), Column('purchase_id', String, ForeignKey('purchases.id'), nullable=False, unique=True),
+    UniqueConstraint('bill_id','due_date'))
+RESOURCES.update({'income':income_entries,'savings':savings_entries,'recurring-bills':recurring_bills,'bill-occurrences':bill_occurrences})
