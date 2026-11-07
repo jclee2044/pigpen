@@ -67,6 +67,14 @@ Current installed release: `4079b2b5d51f6019`. Production health/source metadata
 
 HTTPS completion, November 7: the operator finished the approved route locally. `https://pigpen.example.com:8445` now serves the verified production PWA with trusted HTTPS, preserving all existing routes. A read-only Chromium check through this origin passed service-worker control, offline reload/closed-page reopening, reconnect and mobile overflow checks; API responses were absent from the shell cache and no mutations were attempted. See [the deployment verification](home-server-deployment.md#https-verified--november-7). Real iPhone installation and encrypted provider delivery remain manual acceptance; no code or dependency change was required.
 
+## Horizontal header logo — November 7
+
+Confirmed request: replace the top-left text wordmark with `design/logo-concepts-v11/pigpen-horizontal.png`. An identical runtime copy is in `frontend/src/assets/pigpen-horizontal.png`; the original design file is preserved. `frontend/src/App.vue` imports this asset and retains the accessible PigPen home link. `frontend/src/style.css` sizes it responsively, blends its paper background into the pink header with CSS, and reserves space for the notification/household controls.
+
+Commands/checks: `npm run build`, `npm run lint:check`, `git diff --check`, and a one-off Playwright review against `tools/run_test_api.py --port 8767 --static --demo`. Desktop/mobile headers were visually reviewed at 1440px, 390px, 375px and 320px; the logo stayed inside the header, the household label fitted, pages did not overflow, and the home link/menu worked. The PNG also loaded after an offline reload. No new tests or dependencies were added for this presentation-only change; domain suites were not repeated. Actual iPhone logo appearance remains user review.
+
+Deployed release: `7d458c36c3d3ca3b`, retaining `4079b2b5d51f6019`. Trusted HTTPS health/runtime, the served PNG's exact SHA-256 match to the supplied file, immutable caching and service-worker precache inclusion passed. A read-only browser check through the installed HTTPS origin confirmed the expected image and desktop/phone layout without API mutations.
+
 ## iPhone status bar color — November 7, 2026
 
 Requested: match the status bar background to the logo header's light pink (`#f2dde4`). The HTML and manifest theme colors now match the header. The installed iOS app uses `black-translucent` so the header can draw beneath the status bar; header height/padding and sidebar offset account for the top safe area, with horizontal header insets for the camera cutout. The document background also uses header pink; the body retains the existing page color. No dependencies or API changes.
