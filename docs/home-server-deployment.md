@@ -1,6 +1,6 @@
 # Omarchy/Tailscale deployment and device acceptance
 
-Prepared and approved November 7, 2026; **API, push and backup services are installed. HTTPS awaits local administrator authentication**. This supersedes deployment proposals only where confirmed below. Existing historical documentation remains intact.
+Prepared and approved November 7, 2026; **API, push and backup services are installed. Private Tailscale HTTPS is verified**. This supersedes deployment proposals only where confirmed below. Existing historical documentation remains intact; earlier authentication-pending notes are superseded by the final verification record.
 
 ## Confirmed and proposed choices
 
@@ -58,3 +58,11 @@ Functional copy/dashboard review, November 7: current public release is `74f4b1f
 Purchase empty-state/table review, November 7: current public release is `528c3f90ee18968c`. Empty purchases show the peeking pig and “Nothing here yet”; financial tables use 16px body text and 14px headers. Build, lint, disposable desktop/mobile visual checks and both production PWA browser checks passed before deployment. The public release pointer was atomically updated, only PigPen's API was restarted, and health, public bundle/styles and service-worker version were verified. Release `74f4b1fbb105e7a3` is retained for rollback. Private records, configuration and existing Tailscale routes were preserved; intended-device acceptance remains open.
 
 Live-data acceptance, November 7: current public release is `4079b2b5d51f6019`, retaining `528c3f90ee18968c`. `GET /api/v1/runtime` identifies this installation as production and the UI displays Live data. All 67 backend, 12 unit and 11 browser checks passed, including independent-client synchronization and real-process restart/backup recovery. The installation's health, private permissions, public PWA assets and backup service completion passed; financial snapshot counts/cursor were preserved. A read-only desktop/mobile browser check displayed Create household without sending mutations. Enter real household/profile names and balances through that form; no demo financials were installed. See [the live-data execution record](live-data-plan.md) for commands and remaining gates. The approved sudo retry still required a password and all prior Tailscale routes remained intact; HTTPS verification awaits local authentication.
+
+## HTTPS verified — November 7
+
+After the operator completed the approved command locally, `https://pigpen.example.com:8445` passed hostname/certificate verification with the normal system/browser trust stores. `tailscale serve status --json` confirms 8445 → 8017 and preservation of 443 → 3210, 8443 → 4312 and 8444 → 3000. No further privileged command or policy change was needed.
+
+Read-only HTTPS checks verified API health, production runtime metadata and its no-store header, the standalone manifest and every icon, service-worker scope/cache headers, direct browser routes, immutable public assets, release `4079b2b5d51f6019`, and enabled public push configuration without printing keys. A Chromium session at 390px verified secure context, service-worker control, offline reload, closed-page offline reopening and reconnect to Live data. API responses were absent from the public shell cache; all mutation requests were blocked and none were attempted. No financial records were created or changed.
+
+Use the HTTPS address in Safari with Tailscale connected, then Share → Add to Home Screen. Real iPhone home-screen/OS behavior, two physical household devices and encrypted push-provider delivery remain manual acceptance checks. Existing automatic-test and backup/restore evidence is unchanged. Implementation commits: `da812e8` (UI review), `bcb8b03` (live-data validation).
