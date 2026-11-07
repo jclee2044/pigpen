@@ -103,7 +103,7 @@ The server defaults to localhost:8000; `/docs` describes the typed API and `/api
 
 The earlier scaffold/backend paragraphs are retained as historical checkpoints. The application now includes the Vue/TypeScript/Router screens, typed API integration, profiles and avatars, budgets and purchases, financial records and receipt uploads, wish lists/approvals/comments, notification inbox, durable offline actions, and an installable PWA shell. Browser push settings are connected; real iPhone installation and encrypted delivery remain acceptance checks.
 
-See [frontend implementation gates and reproducible checks](docs/frontend-progress.md) and [the prepared Omarchy/Tailscale deployment](docs/home-server-deployment.md). Production uses a separate private database outside Git and a deployed copy of built frontend assets. No production service or Tailscale route is installed until machine-level approval.
+See [frontend implementation gates and reproducible checks](docs/frontend-progress.md) and [the prepared Omarchy/Tailscale deployment](docs/home-server-deployment.md). Production uses a separate private database outside Git and a deployed copy of built frontend assets. The approved API, push and backup services are installed. Tailscale HTTPS awaits local administrator authentication; the deployment document records current verification and remaining device checks.
 
 ```sh
 # Project root; synthetic disposable tests only:
