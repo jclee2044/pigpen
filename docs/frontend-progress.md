@@ -3,7 +3,7 @@
 November 7, 2026. Authorized execution of the frontend-to-release plan.
 
 1. API connection and testing: passed (4 unit tests, TypeScript/production build and non-mutating lint). Request types are generated from the backend contract; tests use pinned Vitest, Playwright and fake-indexeddb. Native fetch/Vue/Router remain the application stack.
-2. Responsive shell: pending.
+2. Responsive shell: passed (Chromium desktop/mobile routing and overflow checks, TypeScript build and lint). Accepted visual direction and layered avatar assets are reused.
 3. Profiles and identity: pending.
 4. First budget/purchase workflow: pending.
 5. Financial management and attachments: pending.
