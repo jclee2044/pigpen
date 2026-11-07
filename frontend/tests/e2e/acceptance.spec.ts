@@ -1,5 +1,35 @@
 import { test,expect } from '@playwright/test'
 import { seed,command } from './helpers'
+
+test('approval status tracks the selected reviewer and purchases show purchaser avatars',async({page,request},info)=>{
+ const reviewer=await seed(page,request,'Status reviewer')
+ await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
+ const status=page.getByRole('link',{name:/^Approvals:/})
+ const before=Number((await status.getByRole('status').innerText()).match(/^\d+/)?.[0]??0)
+ const owner=await command(request,'user.create',{name:'Status owner',avatar:{hat:'beret',background:'sage'}})
+ await command(request,'request.create',{item:'Approval status purchase',amount_minor:1200},owner.id)
+ const categories=(await (await request.get('/api/v1/categories')).json()).items
+ const food=categories.find((x:{name:string})=>x.name==='Food')
+ for(const [actor,item] of [[reviewer.id,'Reviewer purchase'],[owner.id,'Owner purchase']]){
+  await command(request,'purchase.create',{item:item!,amount_minor:100,category_id:food.id,transaction_date:'2025-08-05'},actor)
+ }
+ await page.getByRole('button',{name:'Sync now',exact:true}).click()
+ await expect(status.getByRole('status')).toHaveText(new RegExp('^'+(before+1)+' requests? needs? review$'))
+ await status.click();await expect(page).toHaveURL(/\/approvals$/)
+ await page.getByRole('button',{name:'Approval status purchase',exact:true}).click()
+ await page.getByRole('button',{name:'Approve request',exact:true}).click()
+ await expect(page.getByRole('button',{name:'Remove my approval',exact:true})).toBeVisible()
+ await page.keyboard.press('Escape')
+ await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'Dashboard',exact:true}).click()
+ await expect(status.getByRole('status')).toHaveText(before?new RegExp('^'+before+' requests? needs? review$'):'No requests to review')
+ await page.getByLabel('Selected month',{exact:true}).fill('2025-08')
+ await expect(page.getByRole('img',{name:'Status reviewer avatar',exact:true})).toBeVisible()
+ await expect(page.getByRole('img',{name:'Status owner avatar',exact:true})).toBeVisible()
+ await page.screenshot({path:info.outputPath('status-avatars-desktop.png'),fullPage:true})
+ await page.setViewportSize({width:390,height:844})
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+ await page.screenshot({path:info.outputPath('status-avatars-mobile.png'),fullPage:true})
+})
 test('stale offline approval is rejected visibly and never approves a revised price',async({page,context,request})=>{
  const reviewer=await seed(page,request,'Conflict reviewer')
  const owner=await command(request,'user.create',{name:'Conflict owner'})
@@ -30,10 +60,10 @@ test('archived allocations survive plan editing and mobile routes have no page o
  await command(request,'budget.set',{month:'2025-06',expected_income_minor:10000,allocations:[{category_id:category.id,amount_minor:5000}]},actor.id)
  await command(request,'category.update',{name:category.name,active:false,expected_revision:category.revision},actor.id,category.id)
  await page.goto('/budget');await page.getByLabel('Budget month',{exact:true}).fill('2025-06')
- await page.getByRole('button',{name:'Edit allocations',exact:true}).click()
+ await page.getByRole('button',{name:'Edit budget',exact:true}).click()
  await expect(page.getByLabel('Historical category · Archived',{exact:true})).toBeDisabled()
  await page.getByLabel('Expected income ($)',{exact:true}).fill('200.00')
- await page.getByRole('button',{name:'Save allocations',exact:true}).click()
+ await page.getByRole('button',{name:'Save budget',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
  expect((await (await request.get('/api/v1/budget-months/2025-06')).json()).allocated_minor).toBe(5000)
  await page.setViewportSize({width:390,height:844})

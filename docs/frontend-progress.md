@@ -24,3 +24,35 @@ From the project root: `backend/.venv/bin/python -m pytest -q backend/tests`, `b
 The development dependency audit's 11 moderate reports all traced to minimatch 10.2.6. The [maintainer advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249) lists 11.0.1 as patched. An explicit `minimatch: 11.0.1` override updates only that transitive resolution and its dependencies; the locked toolchain remains. Linters, builds and tests verify this override with the existing Node 26 environment. The resulting npm audit reports zero vulnerabilities. Revisit the override when upstream lint dependencies accept the patched major version.
 
 Financial runtime records, backups, uploads, environment files and keys stay outside Git. The existing design/ output/ and UI-reference documentation supplied separately are preserved and excluded from these implementation commits. No remote, push or branch changes were made.
+
+## UI review update — November 7
+
+Confirmed visual feedback: header background matches the supplied swatch exactly (`#F2DDE4`); remove the header tagline and the marked profile-page eyebrow, subtitle and attribution paragraph; move Profiles & settings from the sidebar footer into the Our household dropdown. The dropdown keeps selected-profile attribution visible and supports keyboard entry, Escape, outside clicks and route changes.
+
+Changed presentation files: `frontend/src/App.vue`, `frontend/src/style.css`, `frontend/src/views/ProfilesView.vue`, and new `frontend/src/components/HouseholdMenu.vue`. Existing browser helpers/selectors and shell/offline workflows were adjusted for the new navigation. No dependencies or API/domain rules changed.
+
+Checks run: `npm run build`, `npm run lint:check`, `npm run test:e2e` (six passed), `npm exec -- playwright test --config playwright.pwa.config.ts` (two passed), and `git diff --check`. Built desktop/mobile screenshots were visually reviewed. The previous browser preview at localhost:53854 was unreachable from the workspace; the installed app at 127.0.0.1:8017 was updated and its health and served header color verified. Real iPhone checks remain outside this UI verification.
+
+Deployed public asset release: `b9ec050e10817949`; previous release retained. Financial storage and existing service configuration are unchanged.
+
+## Functional copy and dashboard review — November 7
+
+Confirmed feedback: use direct screen/action names and budget terminology, show approval review as a compact status, show purchaser avatars instead of category initials, and remove the decorative sidebar note. Decorative headings, empty-state slogans and invented wish descriptions were removed across the Vue screens, forms, comments, installation/push settings and inbox labels. Essential guidance about approvals, savings, offline actions and device data is retained.
+
+Research references: [Copilot dashboard overview](https://help.copilot.money/en/articles/6045480-dashboard-tab-overview) separates review items and budget summaries; [Monarch budget guide](https://help.monarchmoney.com/hc/en-us/articles/360048883631-Budgets) presents monthly category budgets and spending directly. These informed the compact review status and labels Budgeted, Spent and Budget remaining. Existing financial calculations and JSON field names remain unchanged.
+
+Presentation changes are in DashboardView, BudgetView, PurchaseRows, App/sidebar, the remaining view headings and related form/settings components, plus lib/notifications.ts. Browser interactions were updated for the direct labels. A browser workflow verifies that approval status increases for a new request, decreases only after the selected reviewer's vote, opens Approvals, and displays two different purchasers' avatars.
+
+Commands: `npm run build`, `npm run lint:check`, `npm run test:e2e` (seven passed), `npm exec -- playwright test --config playwright.pwa.config.ts` (two passed), `git diff --check`. Desktop/mobile screenshots with synthetic purchases were reviewed. No new dependencies. The original localhost:53854 preview is unavailable to the browser tools; the installed app at 127.0.0.1:8017 serves the verified update. Real iPhone acceptance remains unverified.
+
+Current deployed public release: `74f4b1fbb105e7a3`.
+
+## Purchase empty state and table readability — November 7
+
+Confirmed review feedback: empty purchases say **Nothing here yet**, accompanied by the existing pig mascot looking toward the viewer; larger financial table text; retain direct labels and remove decorative subtitles throughout the app. The previously implemented **Unbudgeted income** wording remains in place. These presentation choices do not alter the API contract or financial rules.
+
+Added `frontend/src/components/PurchaseEmptyState.vue`, composing the existing SVG pig into a playful peeking illustration. `PurchaseRows.vue` shares this state between Purchases and the dashboard. `frontend/src/style.css` now uses 16px table body text, 14px headers/secondary notes, tabular numerals and unbroken money values. Tables retain their own overflow container on narrow screens. No dependencies or original avatar assets changed.
+
+Commands/checks: `npm run build`, `npm run lint:check`, `npm exec -- playwright test --config playwright.pwa.config.ts` (two passed), and `git diff --check`. A one-off Playwright review used `tools/run_test_api.py --port 8767 --static --demo` and a disposable synthetic database: filtered Purchases displayed the mascot and exact empty-state text, Budget used the intended computed font sizes, and both views fit 1440px/390px viewports without page overflow or browser errors. Desktop/mobile screenshots were visually reviewed. The first review attempt used an incorrect profile-button selector; the corrected review passed and its temporary server was stopped. The full domain/browser suites were not repeated for these presentation-only changes; real iPhone acceptance remains open.
+
+Deployed public release: `528c3f90ee18968c`; previous release retained. PigPen API health, the served empty-state bundle, budget wording, table styles and service-worker build were checked after the approved installation refresh. The older localhost:53854 preview remains unavailable; the updated installed app is at http://127.0.0.1:8017/purchases.

@@ -1,4 +1,4 @@
 import type { Note } from '../api/models'
-const labels:Record<string,string>={ 'wishlist.created':'A new wish to look forward to','request.created':'A new plan needs your review','request.revised':'A household request was revised','request.canceled':'A household request was canceled','approval.on':'A reviewer approved a request','approval.off':'A reviewer removed their approval','comment.created':'A little conversation is waiting','budget.reached':'A category reached its allocation','budget.exceeded':'A category is over its allocation' }
-export const noteLabel=(note:Note)=>labels[note.kind]??'A household update'
+const labels:Record<string,string>={ 'wishlist.created':'Wish added','request.created':'Approval requested','request.revised':'Request updated','request.canceled':'Request canceled','approval.on':'Approval added','approval.off':'Approval removed','comment.created':'Comment added','budget.reached':'Category budget reached','budget.exceeded':'Category over budget' }
+export const noteLabel=(note:Note)=>labels[note.kind]??'Household update'
 export const noteLink=(note:Note)=>note.target_resource==='purchases'?'/purchases?detail='+note.target_id:note.target_resource==='wishlist-items'?'/wish-lists?detail='+note.target_id:note.target_resource==='approval-requests'?'/approvals?detail='+note.target_id:'/budget'

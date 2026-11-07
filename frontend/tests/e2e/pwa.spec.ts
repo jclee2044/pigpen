@@ -20,7 +20,7 @@ test('production PWA reopens offline with its original queued purchase',async({p
  await page.getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'})
  await page.getByRole('button',{name:'Save purchase',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
- await expect(page.getByText('1 purchase(s) waiting to sync.',{exact:true})).toBeVisible()
+ await expect(page.getByText('1 purchase waiting to sync.',{exact:true})).toBeVisible()
  await page.close()
  const reopened=await context.newPage();await reopened.goto('/purchases')
  await expect(reopened.getByRole('heading',{name:'Purchases',exact:true})).toBeVisible()

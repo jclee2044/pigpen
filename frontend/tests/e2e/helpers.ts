@@ -10,6 +10,6 @@ export async function seed(page:Page,request:APIRequestContext,label:string){
  if(!snapshot.records.household.length)await command(request,'household.initialize',{name:'Synthetic household'})
  const user=await command(request,'user.create',{name:label}) as User
  await page.goto('/profiles');await page.getByRole('button',{name:new RegExp(label)}).click()
- await expect(page.locator('.profile-link strong')).toHaveText(label)
+ await expect(page.getByTestId('selected-profile')).toHaveText(label)
  return user
 }

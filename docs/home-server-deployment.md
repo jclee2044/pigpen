@@ -31,7 +31,7 @@ After installation, inspect with `systemctl --user status pigpen.service pigpen-
 
 ## Device acceptance still required
 
-On the iPhone with Tailscale connected, open `https://pigpen.example.com:8445` in Safari. Create the real household/profiles, then use Share → Add to Home Screen (Open as Web App if offered). Launch from the new icon and verify it opens in its own app window. Wait for “Offline app shell is ready” in Profiles & settings.
+On the iPhone with Tailscale connected, open `https://pigpen.example.com:8445` in Safari. Create the real household/profiles, then use Share → Add to Home Screen (Open as Web App if offered). Launch from the new icon and verify it opens in its own app window. Wait for “Offline access ready” in Profiles & settings.
 
 Use an explicitly labeled test purchase, turn connectivity off, close/reopen the installed app, and verify the action is still waiting. Reconnect and verify a single purchase with its original profile/date. Correct or remove that test record through the UI. Sync saved actions before removing the app or clearing browser data; device storage is not a backup and browser eviction cannot be ruled out.
 
@@ -50,3 +50,9 @@ sudo /usr/bin/tailscale serve --bg --yes --https=8445 http://127.0.0.1:8017
 ```
 
 No password is sent to Codex. Once authorized, verify trusted HTTPS and compare all prior Serve routes, then perform the intended-device checks above.
+
+UI review update, November 7: current public asset release is `b9ec050e10817949`, with the exact requested pink header and household settings dropdown. The initial `098f8b72d27b2d0c` release remains available. Only the public asset pointer and API restart were needed; health and the served stylesheet passed verification. The HTTPS authorization status above is unchanged by this UI update.
+
+Functional copy/dashboard review, November 7: current public release is `74f4b1fbb105e7a3`. Approval review uses a compact status, purchase rows display purchaser avatars, budget labels use the confirmed wording, and decorative copy/sidebar note were removed. Prior public releases remain available. API health and the served UI bundle were verified after restart; private financial storage and Tailscale configuration were unchanged.
+
+Purchase empty-state/table review, November 7: current public release is `528c3f90ee18968c`. Empty purchases show the peeking pig and “Nothing here yet”; financial tables use 16px body text and 14px headers. Build, lint, disposable desktop/mobile visual checks and both production PWA browser checks passed before deployment. The public release pointer was atomically updated, only PigPen's API was restarted, and health, public bundle/styles and service-worker version were verified. Release `74f4b1fbb105e7a3` is retained for rollback. Private records, configuration and existing Tailscale routes were preserved; intended-device acceptance remains open.
