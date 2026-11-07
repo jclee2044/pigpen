@@ -13,4 +13,6 @@ test('wish comments, unanimous approval and a linked purchase',async({page,reque
  await page.reload();await page.getByRole('button',{name:'Picnic basket',exact:true}).click();await page.getByRole('button',{name:'Record approved purchase'}).click();await page.getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'});await page.getByLabel('Transaction date',{exact:true}).fill('2025-02-01');await page.getByRole('button',{name:'Save purchase',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0)
  const final=await (await request.get('/api/v1/records/approval-requests/'+proposal.id)).json();expect(final.status).toBe('purchased');expect(final.approved).toBe(true)
  const purchases=(await (await request.get('/api/v1/purchases?month=2025-02')).json()).items;expect(purchases.filter((x:{request_id:string})=>x.request_id===proposal.id)).toHaveLength(1)
+ await page.goto('/notifications');await page.getByRole('button',{name:'A new plan needs your review',exact:true}).click();await expect(page.getByRole('dialog').getByRole('heading',{name:'Picnic basket',exact:true})).toBeVisible()
+ const notes=(await (await request.get('/api/v1/notifications?recipient_id='+reviewer.id)).json()).items;expect(notes.find((n:{kind:string})=>n.kind==='request.created').read_at).toBeTruthy()
 })

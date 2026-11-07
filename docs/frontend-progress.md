@@ -8,7 +8,7 @@ November 7, 2026. Authorized execution of the frontend-to-release plan.
 4. First budget/purchase workflow: passed (real-browser allocations, purchase creation, lost-response retry, single purchase, reload persistence, and parity with backend budget totals).
 5. Financial management and attachments: passed (real-browser income, starting savings, short-month bill payment, receipt upload and purchase correction; backend totals checked). Category and income/bill forms share typed mutation services.
 6. Wish lists/approvals/comments: passed (browser wish creation/comment/prefill, self-approval exclusion, reviewer voting, unanimous approval and linked purchase).
-7. Notification inbox: pending.
+7. Notification inbox: passed (browser read-state persistence, recipient filtering, notification deep links; notifications work independently of push permission).
 8. Durable offline records and synchronization: pending.
 9. PWA installation/offline reopening: pending.
 10. Browser push: pending real-device/credential acceptance.

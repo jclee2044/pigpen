@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed,ref } from 'vue'
+import { computed,ref,watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { rows,state,activeUser,mutate } from '../state/household'
 import type { Request } from '../api/models'
 import { approved } from '../lib/selectors'
@@ -10,7 +11,9 @@ import PurchaseForm from '../components/PurchaseForm.vue'
 import AppDialog from '../components/AppDialog.vue'
 import CommentThread from '../components/CommentThread.vue'
 import PigAvatar from '../components/PigAvatar.vue'
-const filter=ref('open'),adding=ref(false),editing=ref<Request>(),purchasing=ref<Request>(),selected=ref('')
+const filter=ref('open'),adding=ref(false),editing=ref<Request>(),purchasing=ref<Request>(),selected=ref(String(useRoute().query.detail??''))
+const route=useRoute()
+watch(()=>route.query.detail,id=>selected.value=String(id??''))
 const requests=computed(()=>rows('approval-requests').filter(x=>filter.value==='all'||(filter.value==='mine'?x.requester_id===activeUser.value?.id:filter.value==='approved'?x.status==='open'&&approved(x,state.records):x.status==='open')))
 const detail=computed(()=>rows('approval-requests').find(x=>x.id===selected.value))
 const user=(id:string)=>rows('users').find(x=>x.id===id),reviewers=(r:Request)=>rows('users').filter(x=>x.active&&x.id!==r.requester_id)
