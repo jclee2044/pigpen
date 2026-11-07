@@ -12,6 +12,40 @@ from .errors import DomainError
 PUSH_HOSTS=('fcm.googleapis.com','updates.push.services.mozilla.com','web.push.apple.com')
 
 
+def generate_vapid_key(destination):
+    """Explicit operator action; create a new private key, never overwrite one."""
+    import os
+    from pathlib import Path
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives import serialization
+    from .config import PROJECT_ROOT
+    destination = Path(destination)
+    if not destination.is_absolute() or destination.resolve().is_relative_to(PROJECT_ROOT):
+        raise ValueError('VAPID private key must be an absolute path outside the checkout')
+    key = ec.generate_private_key(ec.SECP256R1())
+    data = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                             serialization.NoEncryption())
+    descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, 'wb') as output:
+        output.write(data)
+
+
+def push_config(settings):
+    if not settings.vapid_private_key or not settings.vapid_subject:
+        return {'enabled': False, 'public_key': None}
+    from pathlib import Path
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    try:
+        key = serialization.load_pem_private_key(Path(settings.vapid_private_key).read_bytes(), password=None)
+        if not isinstance(key, ec.EllipticCurvePrivateKey) or not isinstance(key.curve, ec.SECP256R1):
+            raise ValueError('Invalid curve')
+        public = key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+    except (OSError, ValueError, TypeError):
+        raise DomainError('push_unavailable', 'Push configuration is unavailable', 503) from None
+    return {'enabled': True, 'public_key': base64.urlsafe_b64encode(public).decode().rstrip('=')}
+
+
 def validate_subscription(data):
     url=urlparse(data['endpoint']);host=url.hostname or ''
     if url.scheme!='https' or url.username or url.password or url.port not in (None,443) or not (

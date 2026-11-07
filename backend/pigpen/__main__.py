@@ -4,7 +4,7 @@ from pathlib import Path
 from .config import Settings
 from .database import Database, migrate
 from .recovery import backup, restore
-from .push import deliver_once
+from .push import deliver_once, generate_vapid_key
 
 
 def main():
@@ -17,8 +17,14 @@ def main():
     load=commands.add_parser('restore');load.add_argument('source',type=Path);load.add_argument('destination',type=Path)
     load.add_argument('--environment',choices=['development','production'],required=True)
     commands.add_parser('deliver-once',help='Attempt one due outbox job; schedule repeated calls externally')
+    keygen=commands.add_parser('vapid-keygen',help='Create a new private P-256 key outside the checkout')
+    keygen.add_argument('destination',type=Path)
     args=parser.parse_args()
     try:
+        if args.command=='vapid-keygen':
+            generate_vapid_key(args.destination)
+            print('Private key created outside the checkout')
+            return
         if args.command=='restore':
             restore(args.source,args.destination,args.environment)
             print('Restored into a new directory; configure it explicitly before use')

@@ -1,5 +1,5 @@
 import { test,expect } from '@playwright/test'
-import { seed } from './helpers'
+import { seed,command } from './helpers'
 test('production PWA reopens offline with its original queued purchase',async({page,context,request},info)=>{
  await seed(page,request,'PWA actor')
  await page.evaluate(async()=>{await navigator.serviceWorker.ready})
@@ -29,4 +29,41 @@ test('production PWA reopens offline with its original queued purchase',async({p
  await context.setOffline(false);await reopened.getByRole('button',{name:'Sync now',exact:true}).click()
  await expect(reopened.locator('.pending-panel')).toHaveCount(0)
  await expect.poll(async()=>{const data=await (await request.get('/api/v1/purchases?month=2025-04')).json();return data.items.filter((x:{item:string})=>x.item==='PWA offline notebook').length}).toBe(1)
+})
+
+test('push permission is explicit, denial is recoverable, registration disables safely',async({page,request})=>{
+ await page.addInitScript(()=>{
+  let subscribed=false
+  const testState={calls:0,permission:'denied' as NotificationPermission}
+  Object.assign(window,{pigpenPushTest:testState})
+  Object.defineProperty(Notification,'requestPermission',{value:async()=>{testState.calls++;return testState.permission}})
+  const subscription={toJSON:()=>({endpoint:'https://web.push.apple.com/synthetic-test',keys:{p256dh:btoa(String.fromCharCode(4)+String.fromCharCode(0).repeat(64)).replace(/=/g,''),auth:btoa(String.fromCharCode(0).repeat(16)).replace(/=/g,'')}}),unsubscribe:async()=>{subscribed=false;return true}}
+  PushManager.prototype.getSubscription=async()=>subscribed?subscription as unknown as PushSubscription:null
+  PushManager.prototype.subscribe=async()=>{subscribed=true;return subscription as unknown as PushSubscription}
+ })
+ await page.route('**/api/v1/push-config',route=>route.fulfill({json:{enabled:true,public_key:'BA'+ 'A'.repeat(85)}}))
+ const actor=await seed(page,request,'Push actor')
+ await page.goto('/profiles')
+ await expect(page.getByRole('button',{name:'Enable notifications',exact:true})).toBeEnabled()
+ expect(await page.evaluate(()=>Reflect.get(window,'pigpenPushTest').calls)).toBe(0)
+ await page.getByRole('button',{name:'Enable notifications',exact:true}).click()
+ await expect(page.getByText(/Notifications were not allowed/)).toBeVisible()
+ await page.evaluate(()=>{Reflect.get(window,'pigpenPushTest').permission='granted'})
+ await page.getByRole('button',{name:'Enable notifications',exact:true}).click()
+ await expect(page.getByRole('button',{name:'Turn off notifications',exact:true})).toBeEnabled()
+ const device=await page.evaluate(async()=>{const db=await new Promise<IDBDatabase>(resolve=>{const r=indexedDB.open('pigpen-v1');r.onsuccess=()=>resolve(r.result)});return new Promise<string>(resolve=>{const r=db.transaction('meta').objectStore('meta').get('device');r.onsuccess=()=>resolve(r.result)})})
+ let binding=await (await request.get('/api/v1/installations/'+device)).json()
+ expect(binding.installation.user_id).toBe(actor.id);expect(binding.subscription.active).toBe(true)
+ await page.getByRole('button',{name:'Turn off notifications',exact:true}).click()
+ await expect(page.getByRole('button',{name:'Enable notifications',exact:true})).toBeEnabled()
+ binding=await (await request.get('/api/v1/installations/'+device)).json();expect(binding.subscription.active).toBe(false)
+ // A push link resolves the selected recipient's inbox record after a fresh load.
+ const other=await command(request,'user.create',{name:'Push sender'})
+ const plan=await command(request,'request.create',{item:'Push linked plan',amount_minor:1234},other.id)
+ const notes=await (await request.get('/api/v1/notifications?recipient_id='+actor.id)).json()
+ const note=notes.items.find((x:{target_id:string})=>x.target_id===plan.id)
+ expect(note).toBeTruthy()
+ await page.goto('/notifications?notification='+note.id)
+ await expect(page.getByRole('dialog')).toBeVisible()
+ await expect(page.getByRole('dialog').getByText('Push linked plan',{exact:true})).toBeVisible()
 })

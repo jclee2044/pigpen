@@ -44,6 +44,8 @@ Updates/deletes require `expected_revision`. Votes additionally require `request
 
 Notifications are created from committed changes. The outbox stores recipient IDs; delivery rechecks the current installation/profile binding. Minimal push payloads contain only a notification ID and app link. The worker retries transient failures, disables expired subscriptions and persists attempts; HTTP push is at-least-once, and clients should replace displayed notifications using the stable notification ID as a tag.
 
+`GET /push-config` returns `{ "enabled": boolean, "public_key": string|null }`. The public key is URL-safe base64 of the uncompressed P-256 public point; private credentials are never returned. Missing key/contact disables browser registration; invalid configured keys return a generic 503. Clients explicitly request permission on a user gesture, subscribe through the service worker, then send `subscription.set` with the existing installation/subscription revision. Disable the server subscription before unsubscribing the browser. Push links resolve only notifications belonging to the currently selected profile; selecting another profile rebinds future delivery.
+
 ## Runtime configuration and recovery
 
 `PIGPEN_ENV=development|production|test`, `PIGPEN_DATA_DIR=/absolute/path`, optional `PIGPEN_VAPID_PRIVATE_KEY` and `PIGPEN_VAPID_SUBJECT`. Production rejects data directories inside the source tree. No implicit production path, no production fallback for tests, and no database creation/migration on import or application startup. Run migrations explicitly before serving. Development uses synthetic data in a distinct configured directory. Tests explicitly configure temporary storage.

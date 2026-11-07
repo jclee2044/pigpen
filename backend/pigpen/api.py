@@ -20,6 +20,11 @@ def router(db):
     routes = APIRouter(prefix='/api/v1')
     service = Service(db)
 
+    @routes.get('/push-config')
+    def push_configuration():
+        from .push import push_config
+        return push_config(db.settings)
+
     @routes.post('/operations')
     def execute(operation: Operation):
         return service.execute(operation)
