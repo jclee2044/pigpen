@@ -1,0 +1,10 @@
+[Unit]
+Description=Verify PigPen daily and weekly recovery snapshots
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/pigpen/Documents/pigpen/backend
+EnvironmentFile=%h/.config/pigpen/pigpen.env
+ExecStart=/home/pigpen/Documents/pigpen/backend/.venv/bin/python -m pigpen backup-scheduled /home/pigpen/.local/share/pigpen-backups
+UMask=0077
+NoNewPrivileges=true

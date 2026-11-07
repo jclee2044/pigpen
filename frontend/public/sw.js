@@ -8,7 +8,7 @@ self.addEventListener('message',event=>{if(event.data?.type==='ACTIVATE')self.sk
 self.addEventListener('fetch',event=>{
  const url=new URL(event.request.url)
  if(event.request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/'))return
- if(event.request.mode==='navigate')event.respondWith(fetch(event.request).catch(()=>caches.open(CACHE).then(cache=>cache.match('/index.html'))))
+ if(event.request.mode==='navigate')event.respondWith(fetch(event.request).then(response=>{if(!response.ok)throw new Error('App server unavailable');return response}).catch(()=>caches.open(CACHE).then(cache=>cache.match('/index.html'))))
  else if(PRECACHE.includes(url.pathname))event.respondWith(caches.open(CACHE).then(cache=>cache.match(url.pathname)).then(cached=>cached||fetch(event.request)))
 })
 self.addEventListener('push',event=>{

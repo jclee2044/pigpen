@@ -1,0 +1,16 @@
+[Unit]
+Description=PigPen household app and API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pigpen/Documents/pigpen/backend
+EnvironmentFile=%h/.config/pigpen/pigpen.env
+ExecStart=/home/pigpen/Documents/pigpen/backend/.venv/bin/python -m pigpen serve --host 127.0.0.1 --port 8017
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

@@ -18,3 +18,16 @@ test('push worker reveals no financial payload and keeps notification links same
  listeners.notificationclick!({notification:{data:shown?.options.data,close:()=>{}},waitUntil:(promise:Promise<unknown>)=>{task=promise}})
  await task;expect(opened).toBe('https://pigpen.example/notifications?notification='+id)
 })
+
+test('worker keeps the shell available during server failures and never caches API requests',async()=>{
+ const listeners:Record<string,(event:unknown)=>void>={}
+ let task:Promise<unknown>|undefined
+ const shell={status:200,body:'cached shell'}
+ const self={location:{origin:'https://pigpen.example'},addEventListener:(kind:string,callback:(event:unknown)=>void)=>{listeners[kind]=callback}}
+ runInNewContext(readFileSync('public/sw.js','utf8'),{self,URL,fetch:async()=>({ok:false,status:503}),caches:{open:async()=>({match:async()=>shell})}})
+ listeners.fetch!({request:{url:'https://pigpen.example/purchases',method:'GET',mode:'navigate'},respondWith:(promise:Promise<unknown>)=>{task=promise}})
+ expect(await task).toEqual(shell)
+ task=undefined
+ listeners.fetch!({request:{url:'https://pigpen.example/api/v1/sync/snapshot',method:'GET'},respondWith:(promise:Promise<unknown>)=>{task=promise}})
+ expect(task).toBeUndefined()
+})

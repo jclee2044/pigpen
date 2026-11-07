@@ -57,3 +57,18 @@ def test_purchase_optimistic_revision(client,users):
     response=client.post('/api/v1/operations',json=operation('purchase.update',dict(**payload,expected_revision=1),actor,purchase['id']))
     assert response.status_code==409
     assert response.json()['error']['details']['revision']==2
+
+
+def test_edit_plan_retains_archived_allocation_without_allowing_new_inactive_money(client,users):
+    actor=users[0]['id']
+    category=food(client)
+    budget=submit(client,'budget.set',dict(month='2026-11',allocations=[dict(category_id=category['id'],amount_minor=5000)]),actor)
+    submit(client,'category.update',dict(name=category['name'],active=False,expected_revision=category['revision']),actor,category['id'])
+    data=dict(month='2026-11',expected_revision=budget['revision'],expected_income_minor=100000,
+              allocations=[dict(category_id=category['id'],amount_minor=5000)])
+    revised=submit(client,'budget.set',data,actor,budget['id'])
+    assert client.get('/api/v1/budget-months/2026-11').json()['allocated_minor']==5000
+    data['expected_revision']=revised['revision']
+    data['allocations'][0]['amount_minor']=6000
+    assert client.post('/api/v1/operations',json=operation('budget.set',data,actor,budget['id'])).status_code==422
+    assert client.post('/api/v1/operations',json=operation('budget.set',dict(month='2026-12',allocations=data['allocations']),actor)).status_code==422

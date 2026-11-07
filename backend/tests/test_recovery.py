@@ -11,6 +11,8 @@ from uuid import uuid4
 from pigpen.recovery import backup, restore
 from pigpen.database import Database, migrate
 from pigpen.app import create_app
+from contextlib import closing
+import sqlite3
 
 
 def test_backup_restore_financials_attachments_and_replay(client,users,settings,tmp_path):
@@ -49,3 +51,15 @@ def test_cli_migration_and_fresh_process_readiness(tmp_path):
     for command in ['migrate','check']:
         result=subprocess.run([sys.executable,'-m','pigpen',command],cwd=Path(__file__).parents[1],env=env,capture_output=True,text=True)
         assert result.returncode==0,result.stderr
+
+
+def test_live_backup_reads_committed_wal_and_validation_does_not_modify_snapshot(client,users,settings,tmp_path):
+    with closing(sqlite3.connect(settings.database_path)) as keeper:
+        keeper.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+        purchase(client,users[0]['id'])
+        assert settings.database_path.with_name('pigpen.sqlite3-wal').stat().st_size>32
+        destination=backup(settings,tmp_path/'wal-snapshot')
+        recovered=restore(destination,tmp_path/'wal-restored','test')
+        assert {p.name for p in destination.iterdir()}=={'pigpen.sqlite3','manifest.json'}
+        with TestClient(create_app(recovered)) as restored_client:
+            assert restored_client.get('/api/v1/budget-months/2026-11').json()['spent_minor']==100

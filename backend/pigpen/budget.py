@@ -31,6 +31,8 @@ class BudgetServices:
         elif data['expected_revision']:
             raise DomainError('revision_conflict','New budgets require revision 0',409)
         new_allocations=data['allocations']
+        existing_allocations={r['category_id']:dict(r) for r in c.execute(select(s.allocations).where(
+            s.allocations.c.budget_month_id==budget['id'],s.allocations.c.deleted==False)).mappings()} if budget else {}
         if new_allocations is None and not budget:
             prior=c.execute(select(s.budget_months).where(s.budget_months.c.month==previous_month(month))).mappings().first()
             new_allocations=[]
@@ -44,7 +46,10 @@ class BudgetServices:
             if len(set(identifiers))!=len(identifiers):
                 raise DomainError('allocations','Duplicate category allocation')
             for a in new_allocations:
-                cat=get(c,s.categories,a['category_id'],active=True)
+                cat=get(c,s.categories,a['category_id'])
+                previous=existing_allocations.get(a['category_id'])
+                if not cat['active'] and (not previous or previous['amount_minor']!=a['amount_minor']):
+                    raise DomainError('allocations','Archived category allocations can only be retained unchanged')
                 if cat['parent_id']:
                     raise DomainError('allocations','Personal children classify purchases; allocate to the parent')
             savings_ids=[a['category_id'] for a in new_allocations if get(c,s.categories,a['category_id'])['kind']=='savings']

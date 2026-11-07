@@ -98,3 +98,22 @@ export PIGPEN_DATA_DIR="$HOME/.local/share/pigpen-development"
 ```
 
 The server defaults to localhost:8000; `/docs` describes the typed API and `/api/v1/health` reports readiness. Use synthetic data during development. No production database, machine service, HTTPS configuration or real push delivery was created by this implementation.
+
+## Integrated frontend and PWA — November 7, 2026
+
+The earlier scaffold/backend paragraphs are retained as historical checkpoints. The application now includes the Vue/TypeScript/Router screens, typed API integration, profiles and avatars, budgets and purchases, financial records and receipt uploads, wish lists/approvals/comments, notification inbox, durable offline actions, and an installable PWA shell. Browser push settings are connected; real iPhone installation and encrypted delivery remain acceptance checks.
+
+See [frontend implementation gates and reproducible checks](docs/frontend-progress.md) and [the prepared Omarchy/Tailscale deployment](docs/home-server-deployment.md). Production uses a separate private database outside Git and a deployed copy of built frontend assets. No production service or Tailscale route is installed until machine-level approval.
+
+```sh
+# Project root; synthetic disposable tests only:
+backend/.venv/bin/python -m pytest -q backend/tests
+backend/.venv/bin/python tools/generate_api_types.py --check
+npm --prefix frontend test
+npm --prefix frontend run lint:check
+npm --prefix frontend run build
+npm --prefix frontend run test:e2e
+npm --prefix frontend run test:pwa
+# Development UI (API must be running with explicit external development storage):
+npm --prefix frontend run dev
+```

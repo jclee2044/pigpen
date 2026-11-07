@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up PigPen every day
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 America/New_York
+Persistent=true
+RandomizedDelaySec=10m
+Unit=pigpen-backup.service
+
+[Install]
+WantedBy=timers.target

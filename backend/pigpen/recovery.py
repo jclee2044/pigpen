@@ -1,5 +1,6 @@
 """Consistent database snapshots plus immutable attachment objects. No overwrites."""
 from datetime import datetime, timezone
+from contextlib import closing
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -29,7 +30,7 @@ def external_path(path):
 
 
 def check_database(path):
-    with sqlite3.connect(path.as_uri()+'?mode=ro',uri=True) as c:
+    with closing(sqlite3.connect(path.as_uri()+'?mode=ro&immutable=1',uri=True)) as c:
         if c.execute('PRAGMA integrity_check').fetchone()[0]!='ok' or c.execute('PRAGMA foreign_key_check').fetchone():
             raise ValueError('Database integrity validation failed')
 
@@ -52,13 +53,14 @@ def backup(settings,destination):
     stage.mkdir(mode=0o700)
     try:
         output=stage/'pigpen.sqlite3'
-        with sqlite3.connect(settings.database_path.as_uri()+'?mode=ro',uri=True) as source:
-            with sqlite3.connect(output) as target:
+        # The live source MUST see committed WAL pages; immutable applies only to frozen snapshots.
+        with closing(sqlite3.connect(settings.database_path.as_uri()+'?mode=ro',uri=True)) as source:
+            with closing(sqlite3.connect(output)) as target:
                 source.backup(target)
         check_database(output)
         files={'pigpen.sqlite3':digest(output)}
         # Read references from the snapshot, never from the now-moving live database.
-        with sqlite3.connect(output) as snapshot:
+        with closing(sqlite3.connect(output.as_uri()+'?mode=ro&immutable=1',uri=True)) as snapshot:
             attachments=snapshot.execute('SELECT storage_key,checksum FROM attachments').fetchall()
         for key,expected in attachments:
             if not re.fullmatch(r'[0-9a-f]{64}\.(png|jpg|webp)',key):
@@ -78,12 +80,8 @@ def backup(settings,destination):
     return destination
 
 
-def restore(source,destination,environment):
+def validate_backup(source):
     source=Path(source).resolve()
-    settings=Settings(Path(destination),environment)
-    destination=settings.data_dir
-    if destination.exists():
-        raise FileExistsError('Restore requires a new directory; existing financial data is never replaced')
     manifest=json.loads((source/'manifest.json').read_text())
     files=manifest.get('files',{})
     if manifest.get('format')!=1 or 'pigpen.sqlite3' not in files:
@@ -96,10 +94,20 @@ def restore(source,destination,environment):
         if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(source) or digest(path)!=expected:
             raise ValueError('Backup checksum validation failed')
     check_database(source/'pigpen.sqlite3')
-    with sqlite3.connect((source/'pigpen.sqlite3').as_uri()+'?mode=ro',uri=True) as c:
+    with closing(sqlite3.connect((source/'pigpen.sqlite3').as_uri()+'?mode=ro&immutable=1',uri=True)) as c:
         for key,expected in c.execute('SELECT storage_key,checksum FROM attachments'):
             if files.get('uploads/'+key)!=expected:
                 raise ValueError('Backup is missing a referenced attachment')
+    return files
+
+
+def restore(source,destination,environment):
+    source=Path(source).resolve()
+    settings=Settings(Path(destination),environment)
+    destination=settings.data_dir
+    if destination.exists():
+        raise FileExistsError('Restore requires a new directory; existing financial data is never replaced')
+    files=validate_backup(source)
     destination.parent.mkdir(parents=True,exist_ok=True)
     stage=destination.with_name('.'+destination.name+'.restore-'+str(uuid4()));stage.mkdir(mode=0o700)
     try:
@@ -115,3 +123,59 @@ def restore(source,destination,environment):
         shutil.rmtree(stage,ignore_errors=True)
         raise
     return settings
+
+
+def scheduled_backup(settings, destination, day=None):
+    """Keep seven daily and four weekly full snapshots in a dedicated managed root."""
+    import fcntl
+    from zoneinfo import ZoneInfo
+    settings.verify_storage()
+    raw=Path(destination)
+    if raw.is_symlink():
+        raise ValueError('Backup root must not be a symbolic link')
+    root=external_path(raw)
+    if root.is_relative_to(settings.data_dir) or settings.data_dir.is_relative_to(root):
+        raise ValueError('Backup root must be separate from runtime data')
+    expected={'format':1,'source':str(settings.data_dir),'environment':settings.environment}
+    root.mkdir(mode=0o700,parents=True,exist_ok=True)
+    marker=root/'.pigpen-backups.json'
+    if marker.is_symlink():
+        raise ValueError('Invalid backup registration')
+    if not marker.exists():
+        if any(root.iterdir()):
+            raise ValueError('Scheduled backups require a new dedicated destination')
+        with marker.open('x') as output:
+            json.dump(expected,output)
+    if json.loads(marker.read_text())!=expected:
+        raise ValueError('Backup root belongs to another environment or source')
+    lock=root/'.backup.lock'
+    if lock.is_symlink():
+        raise ValueError('Invalid backup lock')
+    with lock.open('a') as held:
+        fcntl.flock(held,fcntl.LOCK_EX)
+        day=day or datetime.now(ZoneInfo('America/New_York')).date()
+        names=['daily-'+day.isoformat(),'weekly-'+day.strftime('%G-W%V')]
+        # Publish and verify both current recovery points before considering retention.
+        for name in names:
+            target=root/name
+            if target.is_symlink():
+                raise ValueError('Backup snapshots must not be symbolic links')
+            if not target.exists():
+                backup(settings,target)
+            validate_backup(target)
+        expired=[]
+        for pattern,count in [(r'daily-\d{4}-\d{2}-\d{2}',7),(r'weekly-\d{4}-W\d{2}',4)]:
+            snapshots=sorted([p for p in root.iterdir() if re.fullmatch(pattern,p.name)],key=lambda p:p.name,reverse=True)
+            for path in snapshots:
+                if path.is_symlink() or not path.is_dir():
+                    raise ValueError('Invalid managed backup snapshot')
+            expired.extend(snapshots[count:])
+        for path in expired:
+            files=validate_backup(path)
+            # Do not delete unrelated files even if placed inside an old snapshot.
+            actual={str(p.relative_to(path)) for p in path.rglob('*') if p.is_file() or p.is_symlink()}
+            if actual!=set(files)|{'manifest.json'} or any(p.is_symlink() for p in path.rglob('*')):
+                raise ValueError('Unrecognized files in a retained snapshot; manual review required')
+        for path in expired:
+            shutil.rmtree(path)
+    return root

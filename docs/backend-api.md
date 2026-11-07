@@ -52,6 +52,10 @@ Notifications are created from committed changes. The outbox stores recipient ID
 
 The CLI provides migration, snapshot backup, restore into a new directory, and one-shot outbox delivery. Backup combines SQLite's online backup with referenced attachment objects and a checksum manifest. Restore refuses an existing target; VAPID/private configuration is managed separately and never added to a repository or backup manifest. Backup retention and service/HTTPS installation remain operator decisions.
 
+November 7 confirmation: seven daily and four weekly full backups at the private external destination are now approved as policy. `backup-scheduled DESTINATION` implements that policy in a new, dedicated environment-registered root. It verifies current snapshots before pruning only its recognized expired snapshots. Service installation remains a separate approval; see [home-server-deployment.md](home-server-deployment.md). `vapid-keygen /absolute/private/new.pem` explicitly creates a private P-256 key outside the checkout and refuses an existing file.
+
+Plan edits may retain an existing archived category allocation unchanged, preserving historical plans. New or changed amounts on archived categories remain invalid; new-month copying includes only active categories.
+
 ## Built frontend serving
 
 Optional `PIGPEN_STATIC_DIR=/absolute/path/to/frontend/dist` mounts the built Vue app after API routes. Static and private data directories must not overlap. Browser routes fall back to index.html; unknown API routes and missing assets remain 404. HTML/service worker require revalidation; hashed assets are immutable. The service worker caches only the built public shell, never API responses. Household records and pending operations use the separate IndexedDB transaction layer.

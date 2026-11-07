@@ -1,0 +1,10 @@
+[Unit]
+Description=Deliver queued PigPen notifications
+
+[Timer]
+OnBootSec=15s
+OnUnitInactiveSec=5s
+Unit=pigpen-push.service
+
+[Install]
+WantedBy=timers.target
