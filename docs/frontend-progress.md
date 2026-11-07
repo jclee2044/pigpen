@@ -7,7 +7,7 @@ November 7, 2026. Authorized execution of the frontend-to-release plan.
 3. Profiles and identity: passed (5 unit tests, real FastAPI/SQLite onboarding, remembered selection/avatar, responsive routing, build and lint). All test data is disposable outside the checkout.
 4. First budget/purchase workflow: passed (real-browser allocations, purchase creation, lost-response retry, single purchase, reload persistence, and parity with backend budget totals).
 5. Financial management and attachments: passed (real-browser income, starting savings, short-month bill payment, receipt upload and purchase correction; backend totals checked). Category and income/bill forms share typed mutation services.
-6. Wish lists/approvals/comments: pending.
+6. Wish lists/approvals/comments: passed (browser wish creation/comment/prefill, self-approval exclusion, reviewer voting, unanimous approval and linked purchase).
 7. Notification inbox: pending.
 8. Durable offline records and synchronization: pending.
 9. PWA installation/offline reopening: pending.
