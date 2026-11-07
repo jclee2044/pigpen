@@ -15,9 +15,10 @@ import uvicorn
 parser=argparse.ArgumentParser()
 parser.add_argument('--port',type=int,default=8765)
 parser.add_argument('--demo',action='store_true')
+parser.add_argument('--static',action='store_true')
 args=parser.parse_args()
 with tempfile.TemporaryDirectory(prefix='pigpen-browser-test-') as directory:
-    settings=Settings(Path(directory),'test')
+    settings=Settings(Path(directory),'test',static_dir=ROOT/'frontend/dist' if args.static else None)
     migrate(settings)
     if args.demo:
         from pigpen.service import Service

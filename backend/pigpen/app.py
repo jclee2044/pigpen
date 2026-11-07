@@ -35,4 +35,7 @@ def create_app(settings: Settings | None = None):
         return JSONResponse({"status": "ok" if ready else "not_ready"}, status_code=200 if ready else 503)
 
     app.include_router(router(app.state.database))
+    if settings.static_dir:
+        from .static import AppFiles
+        app.mount('/', AppFiles(directory=settings.static_dir, html=True))
     return app

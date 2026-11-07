@@ -10,7 +10,7 @@ November 7, 2026. Authorized execution of the frontend-to-release plan.
 6. Wish lists/approvals/comments: passed (browser wish creation/comment/prefill, self-approval exclusion, reviewer voting, unanimous approval and linked purchase).
 7. Notification inbox: passed (browser read-state persistence, recipient filtering, notification deep links; notifications work independently of push permission).
 8. Durable offline records and synchronization: passed (10 unit tests and 4 browser workflows). Offline purchase entry, original-actor preservation after switching, reconnect deduplication, monotonic cursor commits, storage-abort handling, and the background profile-selection race are verified.
-9. PWA installation/offline reopening: pending.
+9. PWA shell/offline reopening: passed in production Chromium (manifest/standalone configuration, service-worker control, offline reload and closed-page reopening, durable queued purchase and exactly-once reconnect). Desktop/mobile screenshots reviewed. Real iPhone home-screen installation remains device acceptance. Native service worker/manifest use no new runtime dependency. FastAPI serves the built app under the same origin; two backend tests verify API routing, cache headers, traversal/symlink protection and private/static separation.
 10. Browser push: pending real-device/credential acceptance.
 11. Release acceptance: pending.
 12. Production deployment: requires hostname, HTTPS, private storage and machine-level approval after a concrete configuration is prepared. No real financial data is used during development.

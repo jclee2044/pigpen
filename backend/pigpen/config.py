@@ -12,6 +12,7 @@ class Settings:
     environment: str = "development"
     vapid_private_key: str | None = None
     vapid_subject: str | None = None
+    static_dir: Path | None = None
 
     def __post_init__(self):
         if self.environment not in {"test", "development", "production"}:
@@ -26,6 +27,14 @@ class Settings:
         if self.environment == "test" and self.vapid_private_key:
             raise ValueError("Tests must not use production push credentials")
         object.__setattr__(self, "data_dir", root)
+        if self.static_dir is not None:
+            static = self.static_dir
+            if not static.is_absolute() or not (static / 'index.html').is_file():
+                raise ValueError('PIGPEN_STATIC_DIR must be an absolute built frontend directory')
+            static = static.resolve()
+            if static == root or static.is_relative_to(root) or root.is_relative_to(static):
+                raise ValueError('Static files and private data must be separate directories')
+            object.__setattr__(self, 'static_dir', static)
 
     @property
     def environment_marker(self):
@@ -54,4 +63,5 @@ class Settings:
         if not raw:
             raise ValueError("Set PIGPEN_DATA_DIR explicitly; no default financial database")
         return cls(Path(raw), os.environ.get("PIGPEN_ENV", "development"),
-                   os.environ.get("PIGPEN_VAPID_PRIVATE_KEY"), os.environ.get("PIGPEN_VAPID_SUBJECT"))
+                   os.environ.get("PIGPEN_VAPID_PRIVATE_KEY"), os.environ.get("PIGPEN_VAPID_SUBJECT"),
+                   Path(os.environ['PIGPEN_STATIC_DIR']) if os.environ.get('PIGPEN_STATIC_DIR') else None)

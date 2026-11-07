@@ -49,3 +49,7 @@ Notifications are created from committed changes. The outbox stores recipient ID
 `PIGPEN_ENV=development|production|test`, `PIGPEN_DATA_DIR=/absolute/path`, optional `PIGPEN_VAPID_PRIVATE_KEY` and `PIGPEN_VAPID_SUBJECT`. Production rejects data directories inside the source tree. No implicit production path, no production fallback for tests, and no database creation/migration on import or application startup. Run migrations explicitly before serving. Development uses synthetic data in a distinct configured directory. Tests explicitly configure temporary storage.
 
 The CLI provides migration, snapshot backup, restore into a new directory, and one-shot outbox delivery. Backup combines SQLite's online backup with referenced attachment objects and a checksum manifest. Restore refuses an existing target; VAPID/private configuration is managed separately and never added to a repository or backup manifest. Backup retention and service/HTTPS installation remain operator decisions.
+
+## Built frontend serving
+
+Optional `PIGPEN_STATIC_DIR=/absolute/path/to/frontend/dist` mounts the built Vue app after API routes. Static and private data directories must not overlap. Browser routes fall back to index.html; unknown API routes and missing assets remain 404. HTML/service worker require revalidation; hashed assets are immutable. The service worker caches only the built public shell, never API responses. Household records and pending operations use the separate IndexedDB transaction layer.

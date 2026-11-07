@@ -14,7 +14,8 @@
     "lint:eslint": "eslint . --fix --cache",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "lint:check": "oxlint . && eslint ."
+    "lint:check": "oxlint . && eslint .",
+    "test:pwa": "npm run build && playwright test --config playwright.pwa.config.ts"
   },
   "dependencies": {
     "vue": "^3.5.42",
