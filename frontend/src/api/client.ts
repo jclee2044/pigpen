@@ -17,7 +17,7 @@ export async function request<T>(path: string, options: RequestInit = {}, timeou
     throw new ApiError(0, 'network', 'Could not reach PigPen. Your saved submission can be retried safely.')
   } finally { clearTimeout(timer) }
 }
-export function operation<K extends Kind>(kind: K, data: Payloads[K], actor: string|null, entity = crypto.randomUUID()): Operation<K> {
-  return { operation_id:crypto.randomUUID(), entity_id:entity, actor_id:actor, client_time:new Date().toISOString(), kind, data } as Operation<K>
+export function operation<K extends Kind>(kind: K, data: Payloads[K], actor: string|null, entity: string = crypto.randomUUID()): Operation {
+  return { operation_id:crypto.randomUUID(), entity_id:entity, actor_id:actor, client_time:new Date().toISOString(), kind, data } as Operation
 }
 export function execute(op: Operation) { return request<{operation_id:string;result:unknown}>('/operations',{method:'POST',body:JSON.stringify(op)}) }
