@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, Form, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from uuid import UUID, uuid5, NAMESPACE_URL
 from sqlalchemy import select
 from .contracts import Operation, Model, AttachmentOperation, AttachmentDeleteOperation
@@ -19,6 +19,10 @@ class PushBatch(Model):
 def router(db):
     routes = APIRouter(prefix='/api/v1')
     service = Service(db)
+
+    @routes.get('/runtime')
+    def runtime():
+        return JSONResponse({'environment': db.settings.environment}, headers={'Cache-Control': 'no-store'})
 
     @routes.get('/push-config')
     def push_configuration():

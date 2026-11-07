@@ -1,21 +1,31 @@
 import { computed,reactive } from 'vue'
 import type { Kind,Payloads } from '../api/generated'
 import { ApiError,request,execute,operation } from '../api/client'
-import { emptyRecords,type Snapshot,type Resources,type ChangePage } from '../api/models'
+import { emptyRecords,type Snapshot,type Resources,type ChangePage,type RuntimeInfo } from '../api/models'
 import { readMeta,writeMeta,pending as readPending,savePending,removePending,commitCache,type CachedSnapshot,type Pending } from '../lib/storage'
 import { applyPage } from '../lib/sync'
 
 export class PendingSubmissionError extends Error { constructor(public submissionId:string,text:string){super(text);this.name='PendingSubmissionError'} }
-export const state=reactive({records:emptyRecords(),selectedId:'',deviceId:'',booted:false,hasCache:false,online:navigator.onLine,busy:false,syncing:false,pending:[] as Pending[],lastSync:'',error:'',notice:''})
+export const state=reactive({records:emptyRecords(),selectedId:'',deviceId:'',booted:false,hasCache:false,online:navigator.onLine,busy:false,syncing:false,pending:[] as Pending[],lastSync:'',error:'',notice:'',environment:null as RuntimeInfo['environment']|null})
 export const activeUser=computed(()=>state.records.users.find(x=>x.id===state.selectedId&&x.active&&!x.deleted))
 export const household=computed(()=>state.records.household[0])
 export const offlineKinds=new Set<Kind>(['purchase.create','request.create','vote.set'])
 export const rows=<K extends keyof Resources>(key:K):Resources[K][]=>state.records[key].filter(x=>!x.deleted) as Resources[K][]
+let runtimeLoading=false
+function identifyServer(){
+ if(state.environment||runtimeLoading)return
+ runtimeLoading=true
+ // Optional metadata must never block financial reads or queued writes.
+ void request<RuntimeInfo>('/runtime',{},3000).then(info=>{
+  if(['production','development','test'].includes(info.environment))state.environment=info.environment
+ }).catch(()=>{}).finally(()=>{runtimeLoading=false})
+}
 export async function refresh(replace=false){
  const snapshot=await request<Snapshot>('/sync/snapshot')
  const stamp=new Date().toISOString()
  const committed=await commitCache({...snapshot,lastSync:stamp},replace)
  state.records=committed.records;state.lastSync=committed.lastSync;state.hasCache=true;state.online=true
+ identifyServer()
 }
 export async function boot(){
  try{
@@ -96,6 +106,7 @@ async function pullChanges(){
   const next=applyPage(cache,page)
   cache=await commitCache({...next,lastSync:new Date().toISOString()})
   state.records=cache.records;state.lastSync=cache.lastSync;state.online=true;state.hasCache=true
+  identifyServer()
   if(!page.has_more)return
  }
  throw new Error('There are more changes to load. Sync again to continue.')

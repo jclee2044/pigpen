@@ -28,6 +28,8 @@ Updates/deletes require `expected_revision`. Votes additionally require `request
 
 ## Reads
 
+`GET /runtime` returns `{ "environment": "production"|"development"|"test" }` from the server's validated configuration, with `Cache-Control: no-store`. It identifies the connected data source without exposing private paths, credentials or household values. It does not initialize storage or replace `/health`; clients may omit its optional source label if unavailable and continue using the existing data/sync contract. Production UI labels this source **Live data**, with connection/offline state shown separately.
+
 `GET /health` reports process/database readiness without household data. GET `/household`, `/avatar-options`, `/users`, `/categories`, `/purchases`, `/income`, `/savings`, `/recurring-bills`, `/wishlist-items`, `/approval-requests`, `/comments`, `/notifications` expose household records. Collections accept `limit` (1–100), `offset`, and documented optional month/category/owner/target/recipient filters. Responses are `{ "items": [...], "limit": n, "offset": n }`. Tombstones are omitted from ordinary lists. `GET /records/{resource}/{id}` returns one record from a fixed allowlist, never arbitrary database tables. Request detail includes current approval status and reviewer votes.
 
 `GET /budget-months/{month}` returns allocations, spending, Personal rollups, income, savings contributions, savings balance, planned unallocated income, and totals. A purchase's transaction date determines its month. Parent/child purchases are counted once. GET `/bill-occurrences?month=...` derives upcoming monthly occurrences; only recorded payments count as purchases.

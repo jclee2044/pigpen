@@ -12,6 +12,18 @@ def test_import_and_factory_do_not_create_database(tmp_path):
     assert not settings.data_dir.exists()
 
 
+@pytest.mark.parametrize('environment', ['production', 'development', 'test'])
+def test_runtime_identifies_only_the_configured_environment_without_storage_side_effects(tmp_path, environment):
+    settings = Settings(tmp_path / environment, environment)
+    with TestClient(create_app(settings)) as client:
+        response = client.get('/api/v1/runtime')
+        assert response.status_code == 200
+        assert response.json() == {'environment': environment}
+        assert response.headers['cache-control'] == 'no-store'
+        assert client.get('/api/v1/health').status_code == 503
+    assert not settings.data_dir.exists()
+
+
 @pytest.mark.parametrize('path', [Path('relative'), PROJECT_ROOT / 'data', PROJECT_ROOT])
 def test_runtime_data_cannot_be_in_checkout(path):
     with pytest.raises(ValueError):
