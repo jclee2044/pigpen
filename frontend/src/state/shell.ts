@@ -1,3 +1,5 @@
-import { reactive } from 'vue'
+import { reactive,watch } from 'vue'
 import { today } from '../lib/money'
-export const shell = reactive({ month:today().slice(0,7), message:'', error:'' })
+function rememberedMonth(){try{return localStorage.getItem('pigpen-month')||today().slice(0,7)}catch{return today().slice(0,7)}}
+export const shell = reactive({ month:rememberedMonth(), message:'', error:'' })
+watch(()=>shell.month,value=>{try{localStorage.setItem('pigpen-month',value)}catch{/* Month preference is optional; financial writes use IndexedDB. */}})

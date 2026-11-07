@@ -6,7 +6,7 @@ November 7, 2026. Authorized execution of the frontend-to-release plan.
 2. Responsive shell: passed (Chromium desktop/mobile routing and overflow checks, TypeScript build and lint). Accepted visual direction and layered avatar assets are reused.
 3. Profiles and identity: passed (5 unit tests, real FastAPI/SQLite onboarding, remembered selection/avatar, responsive routing, build and lint). All test data is disposable outside the checkout.
 4. First budget/purchase workflow: passed (real-browser allocations, purchase creation, lost-response retry, single purchase, reload persistence, and parity with backend budget totals).
-5. Financial management and attachments: pending.
+5. Financial management and attachments: passed (real-browser income, starting savings, short-month bill payment, receipt upload and purchase correction; backend totals checked). Category and income/bill forms share typed mutation services.
 6. Wish lists/approvals/comments: pending.
 7. Notification inbox: pending.
 8. Durable offline records and synchronization: pending.

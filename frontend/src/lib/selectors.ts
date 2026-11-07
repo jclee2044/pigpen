@@ -23,3 +23,11 @@ export function approved(request:Request,records:Records){
  return reviewers.length>0&&reviewers.every(user=>records['approval-votes'].some(v=>!v.deleted&&v.request_id===request.id&&v.reviewer_id===user.id&&v.approved&&v.request_revision===request.revision))
 }
 export const recent=(purchases:Purchase[])=>[...purchases].sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||b.created_at.localeCompare(a.created_at))
+export function occurrences(records:Records,month:string){
+ const year=Number(month.slice(0,4)),number=Number(month.slice(5,7)),lastDay=new Date(Date.UTC(year,number,0)).getUTCDate()
+ return records['recurring-bills'].filter(b=>!b.deleted).flatMap(b=>{
+  const existing=records['bill-occurrences'].find(x=>!x.deleted&&'bill_id' in x&&(x as unknown as {bill_id:string}).bill_id===b.id&&'due_date' in x&&String((x as unknown as {due_date:string}).due_date).startsWith(month)) as unknown as {due_date:string;expected_minor:number;purchase_id:string}|undefined
+  const due=existing?.due_date??`${month}-${String(Math.min(lastDay,b.due_day)).padStart(2,'0')}`
+  return !existing&&(!b.active||due<b.start_date)?[]:[{id:b.id+'/'+due,bill_id:b.id,name:b.name,due_date:due,expected_minor:existing?.expected_minor??b.amount_minor,purchase_id:existing?.purchase_id??null}]
+ }).sort((a,b)=>a.due_date.localeCompare(b.due_date))
+}

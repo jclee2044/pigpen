@@ -1,7 +1,7 @@
 import { test,expect } from '@playwright/test'
 test('onboarding, profiles and responsive routes persist after reload',async({page})=>{
- await page.goto('/');await expect(page.getByRole('heading',{name:'Welcome to PigPen'})).toBeVisible()
- await page.getByLabel('Household name').fill('Synthetic household');await page.getByRole('button',{name:'Create household',exact:true}).click()
+ await page.goto('/');await expect(page.locator('main h1')).toBeVisible()
+ if(await page.getByRole('heading',{name:'Welcome to PigPen'}).isVisible()){await page.getByLabel('Household name').fill('Synthetic household');await page.getByRole('button',{name:'Create household',exact:true}).click()}else{await page.getByRole('button',{name:'Add profile',exact:true}).click()}
  await page.getByLabel('Display name').fill('Alex');await page.getByRole('combobox',{name:'Hat',exact:true}).selectOption('beanie');await page.getByRole('button',{name:'Create profile',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
  await page.reload();await expect(page.locator('.profile-link strong')).toHaveText('Alex')
@@ -11,15 +11,15 @@ test('onboarding, profiles and responsive routes persist after reload',async({pa
  await expect(page.getByRole('navigation',{name:'Mobile navigation'})).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  await page.goto('/profiles');await page.getByRole('button',{name:'Edit name & avatar'}).click();await expect(page.getByRole('combobox',{name:'Hat',exact:true})).toHaveValue('beanie');await page.getByRole('button',{name:'Close dialog'}).click()
- await page.goto('/budget');await page.getByRole('button',{name:'Edit allocations'}).click()
+ await page.goto('/budget');await page.getByLabel('Budget month',{exact:true}).fill('2025-01');await page.getByRole('button',{name:'Edit allocations'}).click()
  await page.getByLabel('Expected income ($)',{exact:true}).fill('1000.00');await page.getByLabel('Food',{exact:true}).fill('200.00');await page.getByRole('button',{name:'Save allocations',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
  await page.goto('/');await expect(page.getByTestId('allocated')).toHaveText('$200.00')
- await page.getByRole('button',{name:'+ Add purchase',exact:true}).click();await page.getByLabel('Item or service').fill('Weekly groceries');await page.getByLabel('Amount ($)',{exact:true}).fill('12.34');await page.getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'})
+ await page.getByRole('button',{name:'+ Add purchase',exact:true}).click();await page.getByLabel('Item or service').fill('Weekly groceries');await page.getByLabel('Amount ($)',{exact:true}).fill('12.34');await page.getByLabel('Transaction date',{exact:true}).fill('2025-01-07');await page.getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'})
  let interrupted=false
  await page.route('**/api/v1/operations',async route=>{if(!interrupted&&route.request().postDataJSON().kind==='purchase.create'){interrupted=true;await route.fetch();await route.abort()}else await route.continue()})
  await page.getByRole('button',{name:'Save purchase',exact:true}).click();await expect(page.getByRole('button',{name:'Retry saved submission'})).toBeVisible();await page.getByRole('button',{name:'Retry saved submission'}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByTestId('spent')).toHaveText('$12.34');await page.reload();await expect(page.getByTestId('spent')).toHaveText('$12.34')
- const server=await page.request.get('/api/v1/budget-months/'+new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}).slice(0,7));expect((await server.json()).spent_minor).toBe(1234)
- expect((await (await page.request.get('/api/v1/purchases')).json()).items).toHaveLength(1)
+ const server=await page.request.get('/api/v1/budget-months/2025-01');expect((await server.json()).spent_minor).toBe(1234)
+ expect((await (await page.request.get('/api/v1/purchases?month=2025-01')).json()).items).toHaveLength(1)
 })

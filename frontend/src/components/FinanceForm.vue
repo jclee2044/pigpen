@@ -1,0 +1,19 @@
+<script setup lang="ts">
+import { ref,computed } from 'vue'
+import type { Bill,Income } from '../api/models'
+import { mutate,rows } from '../state/household'
+import { inputMoney,parseMoney,today } from '../lib/money'
+import { useSubmission } from '../lib/submission'
+import AppDialog from './AppDialog.vue'
+const props=defineProps<{kind:'income'|'savings'|'bill';entry?:Income;bill?:Bill}>();const emit=defineEmits<{close:[]}>()
+const name=ref(props.bill?.name??props.entry?.description??''),amount=ref(props.bill?inputMoney(props.bill.amount_minor):props.entry?inputMoney(props.entry.amount_minor):''),date=ref(props.bill?.start_date??props.entry?.transaction_date??today()),description=ref(props.bill?.description??''),category=ref(props.bill?.category_id??''),dueDay=ref(props.bill?.due_day??1),active=ref(props.bill?.active??true),movement=ref<'opening'|'contribution'|'withdrawal'>('contribution')
+const hasOpening=computed(()=>rows('savings').some(x=>x.kind==='opening'))
+const {saving,error,retryId,run}=useSubmission()
+async function save(){await run(()=>{
+ if(props.kind==='income'){const data={description:name.value,amount_minor:parseMoney(amount.value,false),transaction_date:date.value};return props.entry?mutate('income.update',{...data,expected_revision:props.entry.revision},props.entry.id):mutate('income.create',data)}
+ if(props.kind==='savings')return mutate('savings.create',{kind:movement.value,amount_minor:parseMoney(amount.value),transaction_date:date.value,description:description.value})
+ const data={name:name.value,amount_minor:parseMoney(amount.value,false),category_id:category.value,due_day:Number(dueDay.value),start_date:date.value,description:description.value}
+ return props.bill?mutate('bill.update',{...data,active:active.value,expected_revision:props.bill.revision},props.bill.id):mutate('bill.create',data)
+},()=>emit('close'))}
+</script>
+<template><AppDialog :title="kind==='income'?'Record income':kind==='savings'?'A step toward savings':bill?'Edit monthly bill':'Plan a monthly bill'" @close="emit('close')"><form @submit.prevent="save"><div v-if="error" class="notice error" role="alert">{{error}}</div><fieldset :disabled="saving||!!retryId"><label v-if="kind!=='savings'">{{kind==='bill'?'Bill name':'Income description'}}<input v-model="name" maxlength="200" required /></label><label v-if="kind==='savings'">Savings movement<select v-model="movement"><option v-if="!hasOpening" value="opening">Starting savings</option><option value="contribution">Contribution</option><option value="withdrawal">Withdrawal</option></select></label><div class="form-grid"><label>Amount ($)<input v-model="amount" inputmode="decimal" required /></label><label>{{kind==='bill'?'Start date':'Transaction date'}}<input v-model="date" type="date" required /></label></div><template v-if="kind==='bill'"><label>Category<select v-model="category" required><option value="" disabled>Choose a category</option><option v-for="c in rows('categories').filter(x=>x.active&&x.kind!=='savings')" :key="c.id" :value="c.id">{{c.name}}</option></select></label><label>Monthly due day<input v-model="dueDay" type="number" min="1" max="31" required /></label><p class="form-help">For short months, the bill is due on the month’s last day.</p><label v-if="bill" class="check-label"><input v-model="active" type="checkbox" />Active monthly bill</label></template><label v-if="kind!=='income'">Notes<textarea v-model="description" maxlength="4000" /></label></fieldset><p v-if="kind==='savings'" class="text-small">Manually tracked savings. Contributions are separate from expenses.</p><button class="button primary" :disabled="saving">{{saving?'Saving…':retryId?'Retry saved submission':'Save '+(kind==='bill'?'bill':kind==='savings'?'movement':'income')}}</button></form></AppDialog></template>
