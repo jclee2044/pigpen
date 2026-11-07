@@ -9,7 +9,7 @@ November 7, 2026. Authorized execution of the frontend-to-release plan.
 5. Financial management and attachments: passed (real-browser income, starting savings, short-month bill payment, receipt upload and purchase correction; backend totals checked). Category and income/bill forms share typed mutation services.
 6. Wish lists/approvals/comments: passed (browser wish creation/comment/prefill, self-approval exclusion, reviewer voting, unanimous approval and linked purchase).
 7. Notification inbox: passed (browser read-state persistence, recipient filtering, notification deep links; notifications work independently of push permission).
-8. Durable offline records and synchronization: pending.
+8. Durable offline records and synchronization: passed (10 unit tests and 4 browser workflows). Offline purchase entry, original-actor preservation after switching, reconnect deduplication, monotonic cursor commits, storage-abort handling, and the background profile-selection race are verified.
 9. PWA installation/offline reopening: pending.
 10. Browser push: pending real-device/credential acceptance.
 11. Release acceptance: pending.
