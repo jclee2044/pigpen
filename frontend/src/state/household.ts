@@ -4,6 +4,7 @@ import { ApiError,request,execute,operation } from '../api/client'
 import { emptyRecords,type Snapshot,type Resources } from '../api/models'
 import { readMeta,writeMeta,pending as readPending,savePending,removePending,type Pending } from '../lib/storage'
 
+export class PendingSubmissionError extends Error { constructor(public submissionId:string,text:string){super(text);this.name='PendingSubmissionError'} }
 export const state=reactive({records:emptyRecords(),selectedId:'',deviceId:'',booted:false,hasCache:false,online:navigator.onLine,busy:false,pending:[] as Pending[],lastSync:'',error:'',notice:''})
 export const activeUser=computed(()=>state.records.users.find(x=>x.id===state.selectedId&&x.active&&!x.deleted))
 export const household=computed(()=>state.records.household[0])
@@ -57,6 +58,7 @@ export async function mutate<K extends Kind>(kind:K,data:Payloads[K],entity?:str
   item.state=blocked?'blocked':'uncertain';item.error=message(error);item.details=error instanceof ApiError?error.details:null
   await savePending(item);state.pending=await readPending()
   if(error instanceof ApiError&&error.status===0)state.online=false
+  if(!blocked)throw new PendingSubmissionError(op.operation_id,'Your submission is saved on this device. Retry it to check the server outcome safely.')
   throw error
  }finally{state.busy=false}
 }
