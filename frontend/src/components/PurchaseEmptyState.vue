@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useId } from 'vue'
+const screenId=useId()
 import pig from '../../../assets/avatars/pig-v1/base/pig.svg?url'
 </script>
 
@@ -6,10 +8,10 @@ import pig from '../../../assets/avatars/pig-v1/base/pig.svg?url'
   <div class="purchase-empty">
     <svg class="purchase-empty-mascot" viewBox="0 0 240 174" role="img" aria-label="Pig peeking over an empty screen">
       <defs>
-        <clipPath id="purchase-empty-screen"><rect width="240" height="119" /></clipPath>
+        <clipPath :id="screenId"><rect width="240" height="119" /></clipPath>
       </defs>
       <ellipse cx="120" cy="163" rx="101" ry="7" fill="#ecdedb" opacity=".5" />
-      <g clip-path="url(#purchase-empty-screen)">
+      <g :clip-path="`url(#${screenId})`">
         <image :href="pig" x="20" y="-8" width="200" height="200" transform="rotate(-6 120 100)" />
       </g>
       <rect x="31" y="113" width="178" height="45" rx="10" fill="#fff8f7" stroke="#b78391" stroke-width="2" />
