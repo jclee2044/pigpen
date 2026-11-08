@@ -84,6 +84,9 @@ Budget center details, November 8: confirmed request to place selected-category 
 
 Show cents setting — November 8, 2026: confirmed request to show or hide cent values from Settings. Implementation choice: a Show cents switch in Appearance, enabled by default and remembered on this device (shared with other open tabs on the same origin). Turning it off rounds displayed currency to the nearest whole dollar throughout the app; saved amounts, calculations, and editable amount fields keep exact cents. Missing/unavailable storage defaults to showing cents. No API contract or dependency changes.
 
+
+Household menu spacing and motion — November 8, 2026 (confirmed): place the caret beneath Our household, beside the selected profile name, to reduce the header control width. Keep the label visible at narrow phone widths. Implementation choice: a 200ms fade/downward settle on opening and 150ms fade/upward exit on closing, with a rotating caret. Reduced-motion preference skips these transitions. Existing keyboard, outside-click and route dismissal remain. No dependencies or JSON contract changes.
+
 Thinking-pig anatomy correction — November 8, 2026: the raised thinking hoof replaces the mascot's right front leg rather than adding another limb. Removed that leg's resting outline/hoof, reshaped the bent foreleg and added its matching cloven hoof at the chin. Three legs rest on the ground and one front hoof is raised. Centering, reduced motion and the pull-down wheel remain unchanged.
 
 Generic loading label — November 8, 2026 (confirmed): every thinking-pig indicator says exactly “Loading...” in full-size and compact usage. AppLoading owns this text; removed per-context label overrides including startup's “Loading PigPen…”. Pull-down sync/update retains its wheel and existing screen-reader instructions.

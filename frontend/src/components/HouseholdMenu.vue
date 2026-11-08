@@ -38,13 +38,14 @@ onUnmounted(()=>document.removeEventListener('pointerdown',outside))
  <div ref="container" class="household-menu" @keydown.esc.stop.prevent="close(true)" @focusout="leave">
   <button ref="trigger" type="button" class="profile-link household-trigger" aria-label="Our household" :aria-expanded="open" aria-controls="household-navigation" @click="open=!open" @keydown.down.prevent="focusLink">
    <PigAvatar :avatar="profile?.avatar" />
-   <span class="household-label"><strong>Our household</strong><small data-testid="selected-profile">{{profile?.name||householdName||'Choose a profile'}}</small></span>
-   <AppIcon name="arrow" class="household-chevron" />
+   <span class="household-label"><strong>Our household</strong><small data-testid="selected-profile">{{profile?.name||householdName||'Choose a profile'}}</small><AppIcon name="arrow" class="household-chevron" /></span>
   </button>
-  <nav v-if="open" id="household-navigation" ref="panel" class="household-dropdown" aria-label="Household settings">
+  <Transition name="household-dropdown">
+  <nav v-if="open" :inert="!open" :aria-hidden="!open||undefined" id="household-navigation" ref="panel" class="household-dropdown" aria-label="Household settings">
    <RouterLink to="/profiles" @click="close()"><AppIcon name="profiles" /><span>Profiles</span></RouterLink>
    <RouterLink to="/notifications" @click="close()"><AppIcon name="bell" /><span>Notifications</span><span v-if="unread" class="notification-count" :aria-label="unread+' unread notifications'">{{unread>99?'99+':unread}}</span></RouterLink>
    <RouterLink to="/settings" @click="close()"><AppIcon name="settings" /><span>Settings</span></RouterLink>
   </nav>
+  </Transition>
  </div>
 </template>
