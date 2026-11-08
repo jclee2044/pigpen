@@ -5,7 +5,7 @@ export interface Household extends Row { name: string; currency: string; timezon
 export interface User extends Row { name: string; avatar: Required<Avatar>; active: boolean }
 export interface Category extends Row { name: string; kind: 'expense'|'personal'|'savings'; owner_id: string|null; parent_id: string|null; active: boolean }
 export interface Budget extends Row { month: string; expected_income_minor: number }
-export interface Allocation extends Row { budget_month_id: string; category_id: string; amount_minor: number }
+export interface Allocation extends Row { budget_month_id: string; category_id: string; amount_minor: number; percentage_basis_points?: number | null }
 export interface Purchase extends Row { purchaser_id: string; category_id: string; item: string; amount_minor: number; transaction_date: string; merchant: string|null; description: string; request_id: string|null; bill_id: string|null; bill_due: string|null }
 export interface Income extends Row { user_id: string; amount_minor: number; transaction_date: string; description: string }
 export interface Savings extends Income { kind: 'opening'|'contribution'|'withdrawal' }

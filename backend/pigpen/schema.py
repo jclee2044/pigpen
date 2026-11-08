@@ -65,6 +65,7 @@ allocations = Table('allocations', metadata, *record_columns(),
     Column('budget_month_id', String, ForeignKey('budget_months.id'), nullable=False),
     Column('category_id', String, ForeignKey('categories.id'), nullable=False),
     Column('amount_minor', Integer, nullable=False), CheckConstraint('amount_minor >= 0'),
+    Column('percentage_basis_points', Integer),
     UniqueConstraint('budget_month_id', 'category_id'))
 purchases = Table('purchases', metadata, *record_columns(),
     Column('purchaser_id', String, ForeignKey('users.id'), nullable=False),

@@ -99,3 +99,39 @@ def test_inherited_allocations_exclude_archived_categories(client, users):
     submit(client,'category.update',dict(name=category['name'],active=False,expected_revision=category['revision']),actor,category['id'])
     assert client.get('/api/v1/budget-months/2026-03').json()['allocated_minor']==0
     assert client.get('/api/v1/budget-months/2026-01').json()['allocated_minor']==20000
+
+
+def test_allocation_percentages_persist_and_follow_income(client, users):
+    actor=users[0]['id']; category=food(client)
+    budget=submit(client,'budget.set',dict(month='2026-01',expected_income_minor=30000,
+        allocations=[dict(category_id=category['id'],amount_minor=10000)]),actor)
+    def allocation(month_id):
+        return next(x for x in client.get('/api/v1/sync/snapshot').json()['records']['allocations'] if x['budget_month_id']==month_id)
+    assert allocation(budget['id'])['percentage_basis_points']==3333
+    updated=submit(client,'budget.set',dict(month='2026-01',expected_revision=budget['revision'],
+        expected_income_minor=20000),actor,budget['id'])
+    assert allocation(budget['id'])['amount_minor']==10000
+    assert allocation(budget['id'])['percentage_basis_points']==5000
+    copied=submit(client,'budget.set',dict(month='2026-02',expected_income_minor=40000),actor)
+    assert allocation(copied['id'])['percentage_basis_points']==2500
+    submit(client,'budget.set',dict(month='2026-01',expected_revision=updated['revision'],
+        expected_income_minor=0),actor,budget['id'])
+    assert allocation(budget['id'])['amount_minor']==10000
+    assert allocation(budget['id'])['percentage_basis_points'] is None
+
+
+def test_percentage_migration_backfills_without_changing_money(settings):
+    from sqlalchemy import text
+    from pigpen.database import Database, migrate
+    migrate(settings, '0007')
+    with Database(settings).transaction(write=True) as c:
+        c.execute(text("INSERT INTO households (id,singleton,name,currency,timezone,approval_policy,category_order,revision,deleted,created_at,updated_at) VALUES ('h',1,'Synthetic','USD','America/New_York','all','[]',1,0,'before','before')"))
+        c.execute(text("INSERT INTO categories (id,household_id,name,kind,active,revision,deleted,created_at,updated_at) VALUES ('c','h','Food','expense',1,1,0,'before','before')"))
+        for index,income in enumerate([30000,0,32,9000000000000]):
+            amount=[10000,10000,1,9000000000000][index]
+            c.execute(text("INSERT INTO budget_months (id,household_id,month,expected_income_minor,revision,deleted,created_at,updated_at) VALUES (:id,'h',:month,:income,4,0,'before','before')"),dict(id=f'b{index}',month=f'2026-0{index+1}',income=income))
+            c.execute(text("INSERT INTO allocations (id,household_id,budget_month_id,category_id,amount_minor,revision,deleted,created_at,updated_at) VALUES (:id,'h',:budget,'c',:amount,3,0,'before','before')"),dict(id=f'a{index}',budget=f'b{index}',amount=amount))
+    migrate(settings)
+    with Database(settings).transaction() as c:
+        rows=c.execute(text('SELECT amount_minor,percentage_basis_points,revision FROM allocations ORDER BY id')).all()
+        assert rows==[(10000,3333,3),(10000,None,3),(1,313,3),(9000000000000,10000,3)]

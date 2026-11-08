@@ -72,7 +72,9 @@ class BudgetServices:
             for a in new_allocations:
                 current=old.pop(a['category_id'],None)
                 self.save(c,s.allocations,dict(id=str(uuid5(NAMESPACE_URL,budget['id']+'/'+a['category_id'])),
-                    budget_month_id=budget['id'],**a,deleted=False),current)
+                    budget_month_id=budget['id'],**a,percentage_basis_points=(
+                        (a['amount_minor'] * 10000 + data['expected_income_minor'] // 2) // data['expected_income_minor']
+                        if data['expected_income_minor'] else None),deleted=False),current)
             for current in old.values():
                 self.save(c,s.allocations,{'deleted':True},current)
         return budget
