@@ -9,6 +9,8 @@ import type { Category } from '../api/models'
 
 export class PendingSubmissionError extends Error { constructor(public submissionId:string,text:string){super(text);this.name='PendingSubmissionError'} }
 export const state=reactive({records:emptyRecords(),selectedId:'',deviceId:'',booted:false,hasCache:false,online:navigator.onLine,busy:false,syncing:false,pending:[] as Pending[],lastSync:'',error:'',notice:'',environment:null as RuntimeInfo['environment']|null})
+// Online reorder writes are durable, but need no waiting-to-sync notice while running.
+export const submittingOperations=reactive(new Set<string>())
 export const activeUser=computed(()=>state.records.users.find(x=>x.id===state.selectedId&&x.active&&!x.deleted))
 export const household=computed(()=>state.records.household[0])
 export const offlineKinds=new Set<Kind>(['purchase.create','request.create','vote.set'])
@@ -80,22 +82,26 @@ export async function mutate<K extends Kind>(kind:K,data:Payloads[K],entity?:str
  if(!actor&&!['household.initialize','user.create'].includes(kind))throw new Error('Select your profile first.')
  const op=operation(kind,data,actor,entity)
  const item:Pending={operation:op,state:'queued'}
- await savePending(item);state.pending=await readPending()
- if(!state.online){state.notice='Saved on this device. Waiting to sync.';return undefined}
- state.busy=true
+ await savePending(item)
+ submittingOperations.add(op.operation_id)
  try{
-  const outcome=await execute(op)
-  await removePending(op.operation_id);state.pending=await readPending()
-  try{await refresh()}catch{state.notice='Saved on the server. Refresh to load the latest records.'}
-  return outcome.result
- }catch(error){
-  const blocked=error instanceof ApiError&&error.status>=400&&error.status<500
-  item.state=blocked?'blocked':'uncertain';item.error=message(error);item.details=error instanceof ApiError?error.details:null
-  await savePending(item);state.pending=await readPending()
-  if(error instanceof ApiError&&error.status===0)state.online=false
-  if(!blocked)throw new PendingSubmissionError(op.operation_id,'Your submission is saved on this device. Retry it to check the server outcome safely.')
-  throw error
- }finally{state.busy=false}
+  state.pending=await readPending()
+  if(!state.online){state.notice='Saved on this device. Waiting to sync.';return undefined}
+  state.busy=true
+  try{
+   const outcome=await execute(op)
+   await removePending(op.operation_id);state.pending=await readPending()
+   try{await refresh()}catch{state.notice='Saved on the server. Refresh to load the latest records.'}
+   return outcome.result
+  }catch(error){
+   const blocked=error instanceof ApiError&&error.status>=400&&error.status<500
+   item.state=blocked?'blocked':'uncertain';item.error=message(error);item.details=error instanceof ApiError?error.details:null
+   await savePending(item);state.pending=await readPending()
+   if(error instanceof ApiError&&error.status===0)state.online=false
+   if(!blocked)throw new PendingSubmissionError(op.operation_id,'Your submission is saved on this device. Retry it to check the server outcome safely.')
+   throw error
+  }finally{state.busy=false}
+ }finally{submittingOperations.delete(op.operation_id)}
 }
 export async function retryPending(id:string){
  const item=(await readPending()).find(x=>x.operation.operation_id===id);if(!item)return

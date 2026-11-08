@@ -189,6 +189,11 @@ export interface WishlistCreate {
   "url"?: string | null
 }
 
+export interface WishlistReorder {
+  "expected_revision": number
+  "item_ids": Array<string>
+}
+
 export interface WishlistUpdate {
   "name": string
   "price_minor": number
@@ -486,6 +491,15 @@ export interface wishlist_delete {
   "data": Delete
 }
 
+export interface wishlist_reorder {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "wishlist.reorder"
+  "data": WishlistReorder
+}
+
 export interface wishlist_update {
   "operation_id": string
   "entity_id": string
@@ -514,6 +528,7 @@ export interface Payloads {
   "bill.create": BillCreate
   "bill.update": BillUpdate
   "bill.pay": BillPay
+  "wishlist.reorder": WishlistReorder
   "wishlist.create": WishlistCreate
   "wishlist.update": WishlistUpdate
   "wishlist.delete": Delete

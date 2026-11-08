@@ -18,6 +18,7 @@ households = Table('households', metadata,
     Column('name', String, nullable=False), Column('currency', String, nullable=False),
     Column('timezone', String, nullable=False), Column('approval_policy', String, nullable=False),
     Column('category_order', JSON, nullable=False, server_default='[]'),
+    Column('wishlist_order', JSON, nullable=False, server_default='[]'),
     Column('revision', Integer, nullable=False), Column('deleted', Boolean, nullable=False),
     Column('created_at', String, nullable=False), Column('updated_at', String, nullable=False),
     CheckConstraint('singleton = 1'), CheckConstraint("approval_policy = 'all'"))
@@ -47,6 +48,7 @@ outbox = Table('outbox', metadata,
 RESOURCES = {'household': households, 'notifications': notifications}
 
 users = Table('users', metadata, *record_columns(),
+    Column('wishlist_order', JSON, nullable=False, server_default='[]'),
     Column('name', String, nullable=False), Column('name_key', String, nullable=False, unique=True),
     Column('avatar', JSON, nullable=False), Column('active', Boolean, nullable=False))
 categories = Table('categories', metadata, *record_columns(),

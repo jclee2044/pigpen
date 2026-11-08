@@ -7,6 +7,29 @@ from .errors import DomainError
 
 
 class ApprovalServices:
+    def do_wishlist_reorder(self,c,op):
+        household=self.household(c)
+        legacy=op['entity_id']!=household['id']
+        target=get(c,s.users,op['entity_id']) if legacy else household
+        expect(target,op['data']['expected_revision'])
+        ids=op['data']['item_ids']
+        wishes=[dict(row) for row in c.execute(select(s.wishlist_items).where(
+            s.wishlist_items.c.deleted.is_(False))).mappings()]
+        available={row['id'] for row in wishes if not legacy or row['owner_id']==target['id']}
+        if len(ids)!=len(set(ids)) or not set(ids)<=available:
+            raise DomainError('wishlist','Order must contain unique existing wishes in the target list')
+        existing=[value for value in household['wishlist_order'] if any(row['id']==value for row in wishes)]
+        existing += [row['id'] for row in sorted(wishes,key=lambda row:(row['created_at'],row['id'])) if row['id'] not in existing]
+        if legacy:
+            owner_order=ids+[value for value in existing if value in available and value not in ids]
+            result=self.save(c,s.users,{'wishlist_order':owner_order},target)
+            positions=iter(owner_order)
+            order=[next(positions) if value in available else value for value in existing]
+            self.save(c,s.households,{'wishlist_order':order},household)
+            return result
+        order=ids+[value for value in existing if value not in ids]
+        return self.save(c,s.households,{'wishlist_order':order},household)
+
     def do_wishlist_create(self,c,op):
         result=self.save(c,s.wishlist_items,dict(id=op['entity_id'],owner_id=op['actor_id'],**op['data'],status='active'))
         self.notify(c,op,'wishlist.created','wishlist-items',result['id'])

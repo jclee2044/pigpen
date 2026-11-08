@@ -101,6 +101,16 @@ Comment resend — November 8, 2026: double-tapping an authored comment opens a 
 
 Comment typography follow-up — November 8, 2026 (confirmed): use the same 12px regular font for both the date and time, with the username slightly larger at 14px. Keep minute precision and muted timestamp color. Prevent mobile text autosizing from changing the header hierarchy and inherit timestamp typography for detected date links.
 
+Wish dragging and status — November 8, 2026 (confirmed): active wish cards omit the Active tag. The grip is excluded from page pull-to-refresh. The stationary wish list retains pointer capture as its cards move; continuous drags in either direction persist order on drop, while cancellation restores the prior order.
+
 Thinking-pig anatomy correction — November 8, 2026: the raised thinking hoof replaces the mascot's right front leg rather than adding another limb. Removed that leg's resting outline/hoof, reshaped the bent foreleg and added its matching cloven hoof at the chin. Three legs rest on the ground and one front hoof is raised. Centering, reduced motion and the pull-down wheel remain unchanged.
 
+Shared wish order — November 8, 2026 (confirmed): every wish has a drag grip for every active profile. Pointer/touch and arrow keys can move items across owners in one household order. Selecting an owner or status displays a subsequence; filtered moves preserve hidden slots.
+
 Generic loading label — November 8, 2026 (confirmed): every thinking-pig indicator says exactly “Loading...” in full-size and compact usage. AppLoading owns this text; removed per-context label overrides including startup's “Loading PigPen…”. Pull-down sync/update retains its wheel and existing screen-reader instructions.
+
+Wish-card drag motion — November 8, 2026 (confirmed): the lifted card follows the finger/mouse directly above the page, with a subtle shadow and dashed destination placeholder. Neighboring cards slide into position over 200ms, and the lifted card settles into its slot over 180ms on release. Cancellation returns it to its original slot. Reduced motion disables the optional sliding/settling transitions while retaining direct tracking and keyboard movement. Shared ordering and wish-management permissions remain unchanged.
+
+Wish drop behavior — November 8, 2026 (confirmed): releasing a reorder stays on the wish-list screen; compatibility clicks from that gesture cannot open details, while a new intentional tap or keyboard activation can. The first overlap between the dragged card's edge and another slot selects that position for release, without waiting for the finger/mouse to reach its midpoint. The existing sliding preview and shared order remain.
+
+Wish save/scroll and swipe grip — November 8, 2026 (confirmed): releasing a reordered card preserves the current viewport. A healthy online reorder must not flash a Waiting to sync panel above the list; durable pending/error recovery remains available. The reorder grip belongs to the swipe surface and follows the card during partial/full swipe-to-delete and slide-back. Grip arrow keys do not also activate swipe keyboard shortcuts.

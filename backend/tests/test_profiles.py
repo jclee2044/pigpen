@@ -75,7 +75,7 @@ def test_category_order_migration_preserves_existing_household(settings):
     with Database(settings).transaction() as connection:
         row = connection.execute(select(s.households)).mappings().one()
         assert row['name'] == 'Existing household'
-        assert row['revision'] == 4
+        assert row['revision'] == 5  # Shared wish-order migration publishes the new household metadata.
         assert row['category_order'] == []
 
 
@@ -141,7 +141,7 @@ def test_hierarchy_migration_preserves_references_and_publishes_changes(settings
         assert c.execute(select(s.purchases.c.category_id)).scalar() == 'books'
         assert c.execute(select(s.allocations.c.category_id)).scalar() == 'personal'
         assert any(row['name'] == 'Subscriptions' and row['allows_subcategories'] for row in categories.values())
-        records = [row for row in c.execute(select(s.changes.c.record)).scalars()]
+        records = [row for row in c.execute(select(s.changes.c.record).where(s.changes.c.resource == 'categories')).scalars()]
         assert {row['name'] for row in records} == {'personal', 'Subscriptions'}
     migrate(settings)
     with Database(settings).transaction() as c:

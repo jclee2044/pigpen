@@ -27,10 +27,14 @@ def upgrade():
     connection.exec_driver_sql('ALTER TABLE categories_new RENAME TO categories')
     connection.exec_driver_sql("CREATE UNIQUE INDEX one_personal_parent ON categories (owner_id) WHERE kind = 'personal' AND parent_id IS NULL")
     connection.exec_driver_sql('ALTER TABLE categories ADD COLUMN allows_subcategories BOOLEAN NOT NULL DEFAULT 0 CHECK (parent_id IS NULL OR allows_subcategories = 0)')
-    service = Service(None)
+    # Historical migrations must read the schema at this revision.
+    class MigrationService(Service):
+        def household(self, c):
+            return dict(c.exec_driver_sql('SELECT * FROM households').mappings().first())
+    service = MigrationService(None)
     for row in connection.execute(select(s.categories).where(s.categories.c.kind == 'personal', s.categories.c.parent_id.is_(None))).mappings().all():
         service.save(connection, s.categories, {'allows_subcategories': True}, dict(row))
-    household = connection.execute(select(s.households)).mappings().first()
+    household = connection.exec_driver_sql('SELECT * FROM households').mappings().first()
     if household:
         existing = connection.execute(select(s.categories).where(
             s.categories.c.parent_id.is_(None), s.categories.c.kind == 'expense',

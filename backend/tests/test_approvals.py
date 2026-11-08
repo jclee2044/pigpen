@@ -170,5 +170,76 @@ def test_denial_migration_preserves_existing_requests_votes_and_replay(settings,
         for name,rows in before.items():
             assert [tuple(row) for row in c.exec_driver_sql('SELECT * FROM '+name)]==rows
         assert c.execute(select(s.approval_votes.c.id)).scalar()==vote['id']
+        assert c.execute(select(s.users.c.wishlist_order)).scalars().all()==[[],[]]
     denied=execute('request.deny',dict(expected_revision=1,reason='Later'),reviewer,proposal['id'])
     assert denied['status']=='denied'
+
+
+def test_shared_wishlist_order_any_actor_conflicts_replay_and_sync(client,users):
+    owner,other=users[:2]
+    a,b=[submit(client,'wishlist.create',dict(name=name,price_minor=100),owner['id']) for name in ['First','Second']]
+    foreign=submit(client,'wishlist.create',dict(name='Other',price_minor=100),other['id'])
+    household=client.get('/api/v1/sync/snapshot').json()['records']['household'][0]
+    data=dict(expected_revision=household['revision'],item_ids=[b['id'],foreign['id'],a['id']])
+    for ids in [[a['id'],a['id']],[str(uuid4())]]:
+        assert client.post('/api/v1/operations',json=operation('wishlist.reorder',{**data,'item_ids':ids},other['id'],household['id'])).status_code==422
+    cursor=client.get('/api/v1/sync/snapshot').json()['cursor']
+    op=operation('wishlist.reorder',data,other['id'],household['id'])
+    first=client.post('/api/v1/operations',json=op)
+    assert first.status_code==200
+    result=first.json()['result']
+    assert result['wishlist_order']==[b['id'],foreign['id'],a['id']]
+    assert client.post('/api/v1/operations',json=op).json()==first.json()
+    assert client.post('/api/v1/operations',json=operation('wishlist.reorder',data,owner['id'],household['id'])).status_code==409
+    changes=client.get(f'/api/v1/sync/pull?cursor={cursor}').json()['changes']
+    assert any(x['resource']=='household' and x['record']==result for x in changes)
+    snapshot=client.get('/api/v1/sync/snapshot').json()
+    assert snapshot['records']['household'][0]['wishlist_order']==result['wishlist_order']
+    subset=submit(client,'wishlist.reorder',dict(expected_revision=result['revision'],item_ids=[a['id']]),owner['id'],household['id'])
+    assert subset['wishlist_order']==[a['id'],b['id'],foreign['id']]
+    # Shared ordering does not grant ownership of the wishes themselves.
+    assert client.post('/api/v1/operations',json=operation('wishlist.delete',{'expected_revision':a['revision']},other['id'],a['id'])).status_code==403
+    submit(client,'wishlist.delete',dict(expected_revision=a['revision']),owner['id'],a['id'])
+    assert client.post('/api/v1/operations',json=operation('wishlist.reorder',dict(expected_revision=subset['revision'],item_ids=[a['id']]),other['id'],household['id'])).status_code==422
+
+
+def test_legacy_wishlist_reorder_by_another_profile_merges_shared_slots(client,users):
+    owner,other=users[:2]
+    a,b=[submit(client,'wishlist.create',dict(name=name,price_minor=100),owner['id']) for name in ['A','B']]
+    x=submit(client,'wishlist.create',dict(name='X',price_minor=100),other['id'])
+    household=client.get('/api/v1/sync/snapshot').json()['records']['household'][0]
+    submit(client,'wishlist.reorder',dict(expected_revision=household['revision'],item_ids=[a['id'],x['id'],b['id']]),other['id'],household['id'])
+    submit(client,'wishlist.reorder',dict(expected_revision=owner['revision'],item_ids=[b['id'],a['id']]),other['id'],owner['id'])
+    snapshot=client.get('/api/v1/sync/snapshot').json()
+    assert snapshot['records']['household'][0]['wishlist_order']==[b['id'],x['id'],a['id']]
+
+
+def test_shared_wishlist_migration_preserves_prior_visible_order(settings,monkeypatch):
+    from sqlalchemy import MetaData,Table,update
+    from pigpen.database import migrate
+    migrate(settings,'0012')
+    db=Database(settings)
+    service=Service(db)
+    def execute(kind,data,actor=None,entity=None):
+        return service.execute(TypeAdapter(Operation).validate_python(operation(kind,data,actor,entity)))['result']
+    old_households=Table('households',MetaData(),autoload_with=db.engine)
+    with monkeypatch.context() as old:
+        old.setattr(s,'households',old_households)
+        old.setitem(s.RESOURCES,'household',old_households)
+        execute('household.initialize',dict(name='Existing household'))
+        profiles=[execute('user.create',dict(name=name)) for name in ['First owner','Second owner']]
+        wishes={profile['id']:[execute('wishlist.create',dict(name=name,price_minor=100),profile['id']) for name in ['First','Second']] for profile in profiles}
+        with db.transaction(write=True) as c:
+            for owner,items in wishes.items():
+                c.execute(update(s.users).where(s.users.c.id==owner).values(wishlist_order=[item['id'] for item in reversed(items)]))
+    expected=[wish['id'] for owner in sorted(wishes) for wish in reversed(wishes[owner])]
+    with db.transaction() as c:
+        before=[tuple(row) for row in c.exec_driver_sql('SELECT * FROM wishlist_items')]
+    migrate(settings)
+    with db.transaction() as c:
+        assert c.execute(select(s.households.c.wishlist_order)).scalar()==expected
+        change=c.execute(select(s.changes.c.record).where(s.changes.c.resource=='household').order_by(s.changes.c.cursor.desc())).scalar()
+        assert change['wishlist_order']==expected
+        assert change['revision']==2
+        assert [tuple(row) for row in c.exec_driver_sql('SELECT * FROM wishlist_items')]==before
+        assert not c.exec_driver_sql('PRAGMA foreign_key_check').all()

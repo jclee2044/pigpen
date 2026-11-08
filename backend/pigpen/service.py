@@ -95,7 +95,7 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
     def do_user_create(self, c, op):
         data = op['data']
         self.validate_avatar(data['avatar'])
-        record = self.save(c, s.users, dict(id=op['entity_id'], **data, name_key=data['name'].casefold(), active=True))
+        record = self.save(c, s.users, dict(id=op['entity_id'], **data, name_key=data['name'].casefold(), active=True, wishlist_order=[]))
         self.save(c, s.categories, dict(id=str(uuid5(NAMESPACE_URL, op['entity_id'] + '/personal')), name=data['name']+' Personal',
             kind='personal', owner_id=op['entity_id'], parent_id=None, active=True, allows_subcategories=True))
         return record

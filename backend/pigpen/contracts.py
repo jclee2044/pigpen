@@ -178,6 +178,11 @@ class WishlistUpdate(WishlistCreate):
     status: Literal['active','purchased','archived'] = 'active'
 
 
+class WishlistReorder(Model):
+    expected_revision: Revision
+    item_ids: list[UUID] = Field(max_length=500)
+
+
 class RequestCreate(Model):
     item: Text
     amount_minor: PositiveMoney
@@ -208,7 +213,7 @@ class CommentCreate(Model):
     text: Annotated[str, Field(min_length=1,max_length=4000)]
 
 
-PAYLOADS.update({'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,'wishlist.delete':Delete,
+PAYLOADS.update({'wishlist.reorder':WishlistReorder,'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,'wishlist.delete':Delete,
                  'request.create':RequestCreate,'request.update':RequestUpdate,'request.cancel':Delete,'request.delete':Delete,'request.deny':RequestDeny,
                  'vote.set':VoteSet,'comment.create':CommentCreate,'comment.resend':Model,'notification.read':Delete})
 class InstallationSelect(Model):
