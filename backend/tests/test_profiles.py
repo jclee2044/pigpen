@@ -77,3 +77,95 @@ def test_category_order_migration_preserves_existing_household(settings):
         assert row['name'] == 'Existing household'
         assert row['revision'] == 4
         assert row['category_order'] == []
+
+
+def test_shared_subcategories_validation_and_rollup(client, users):
+    actor = users[0]['id']
+    categories = client.get('/api/v1/categories').json()['items']
+    subscriptions = next(c for c in categories if c['name'] == 'Subscriptions')
+    assert subscriptions['allows_subcategories']
+    child = submit(client, 'category.create', dict(name='Streaming', parent_id=subscriptions['id']), actor)
+    assert child['owner_id'] is None and not child['allows_subcategories']
+    custom = submit(client, 'category.create', dict(name='Utilities', allows_subcategories=True), actor)
+    flat = submit(client, 'category.create', dict(name='Flat'), actor)
+    savings = next(c for c in categories if c['kind'] == 'savings')
+    for parent, extra in [(child, {}), (flat, {}), (savings, {}), (custom, {'allows_subcategories': True})]:
+        bad = operation('category.create', dict(name='Invalid', parent_id=parent['id'], **extra), actor)
+        assert client.post('/api/v1/operations', json=bad).status_code == 422
+    for row in [child, savings]:
+        bad = operation('category.update', dict(name=row['name'], active=True, expected_revision=row['revision'], allows_subcategories=True), actor, row['id'])
+        assert client.post('/api/v1/operations', json=bad).status_code == 422
+    bad = operation('category.update', dict(name=subscriptions['name'], active=True, expected_revision=subscriptions['revision'], allows_subcategories=False), actor, subscriptions['id'])
+    assert client.post('/api/v1/operations', json=bad).status_code == 422
+    # Older clients omit the new flag without disabling an enabled parent.
+    updated = submit(client, 'category.update', dict(name='Utilities renamed', active=True, expected_revision=custom['revision']), actor, custom['id'])
+    assert updated['allows_subcategories']
+    submit(client, 'budget.set', dict(month='2026-11', expected_income_minor=10000,
+        allocations=[dict(category_id=subscriptions['id'], amount_minor=5000)]), actor)
+    for category, amount in [(subscriptions, 1000), (child, 1500)]:
+        submit(client, 'purchase.create', dict(item='Synthetic subscription', amount_minor=amount,
+            category_id=category['id'], transaction_date='2026-11-08'), actor)
+    budget = client.get('/api/v1/budget-months/2026-11').json()
+    rollup = next(row for row in budget['categories'] if row['category_id'] == subscriptions['id'])
+    assert rollup['actual_minor'] == 2500 and rollup['remaining_minor'] == 2500
+    bad = operation('budget.set', dict(month='2026-12', expected_income_minor=10000,
+        allocations=[dict(category_id=child['id'], amount_minor=1000)]), actor)
+    assert client.post('/api/v1/operations', json=bad).status_code == 422
+    archived = submit(client, 'category.update', dict(name=child['name'], active=False, expected_revision=child['revision']), actor, child['id'])
+    assert not archived['active']
+    assert client.post('/api/v1/operations', json=operation('category.update', dict(name=subscriptions['name'], active=True,
+        expected_revision=subscriptions['revision'], allows_subcategories=False), actor, subscriptions['id'])).status_code == 422
+    parent = submit(client, 'category.update', dict(name=subscriptions['name'], active=False, expected_revision=subscriptions['revision']), actor, subscriptions['id'])
+    assert client.post('/api/v1/operations', json=operation('category.create', dict(name='Archived parent child', parent_id=parent['id']), actor)).status_code == 409
+
+
+def test_hierarchy_migration_preserves_references_and_publishes_changes(settings):
+    migrate(settings, '0008')
+    with Database(settings).transaction(write=True) as c:
+        common = dict(household_id='house', revision=1, deleted=False, created_at='before', updated_at='before')
+        c.execute(s.households.insert().values(id='house', singleton=1, name='House', currency='USD', timezone='America/New_York', approval_policy='all', category_order=[], revision=1, deleted=False, created_at='before', updated_at='before'))
+        c.execute(s.users.insert().values(id='alex', name='Alex', name_key='alex', avatar={}, active=True, **common))
+        # Use SQL because the pre-0009 table has no allows_subcategories column.
+        for identifier, parent in [('personal', None), ('books', 'personal')]:
+            c.execute(text('INSERT INTO categories (id,household_id,revision,deleted,created_at,updated_at,name,kind,owner_id,parent_id,active) VALUES (:id,\'house\',1,0,\'before\',\'before\',:id,\'personal\',\'alex\',:parent,1)'), dict(id=identifier, parent=parent))
+        c.execute(s.purchases.insert().values(id='purchase', purchaser_id='alex', category_id='books', item='Book', amount_minor=1500, transaction_date='2026-11-08', description='', **common))
+        c.execute(s.budget_months.insert().values(id='month', month='2026-11', expected_income_minor=10000, **common))
+        c.execute(s.allocations.insert().values(id='allocation', budget_month_id='month', category_id='personal', amount_minor=5000, **common))
+    migrate(settings)
+    with Database(settings).transaction() as c:
+        assert not c.exec_driver_sql('PRAGMA foreign_key_check').first()
+        assert c.exec_driver_sql('PRAGMA foreign_keys').scalar() == 1
+        categories = {row['id']: dict(row) for row in c.execute(select(s.categories)).mappings()}
+        assert categories['personal']['allows_subcategories'] and categories['personal']['revision'] == 2
+        assert not categories['books']['allows_subcategories'] and categories['books']['parent_id'] == 'personal'
+        assert c.execute(select(s.purchases.c.category_id)).scalar() == 'books'
+        assert c.execute(select(s.allocations.c.category_id)).scalar() == 'personal'
+        assert any(row['name'] == 'Subscriptions' and row['allows_subcategories'] for row in categories.values())
+        records = [row for row in c.execute(select(s.changes.c.record)).scalars()]
+        assert {row['name'] for row in records} == {'personal', 'Subscriptions'}
+    migrate(settings)
+    with Database(settings).transaction() as c:
+        assert c.execute(select(func.count()).select_from(s.categories)).scalar() == 3
+
+
+def test_legacy_category_retry_hash_is_preserved(client, users, settings):
+    from hashlib import sha256
+    import json
+    from sqlalchemy import update
+    actor = users[0]['id']
+    create = operation('category.create', dict(name='Old client category', kind='expense', owner_id=None, parent_id=None), actor)
+    first = client.post('/api/v1/operations', json=create)
+    assert first.status_code == 200
+    category = first.json()['result']
+    edit = operation('category.update', dict(name='Old client renamed', active=True, expected_revision=category['revision']), actor, category['id'])
+    for command in [create, edit]:
+        response = client.post('/api/v1/operations', json=command)
+        assert response.status_code == 200
+        from pydantic import TypeAdapter
+        from pigpen.contracts import Operation
+        legacy = TypeAdapter(Operation).validate_python(command).model_dump(mode='json')
+        legacy['data'].pop('allows_subcategories')
+        legacy_hash = sha256(json.dumps(legacy, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        with Database(settings).transaction(write=True) as c:
+            c.execute(update(s.operations).where(s.operations.c.id == command['operation_id']).values(payload_hash=legacy_hash))
+        assert client.post('/api/v1/operations', json=command).json() == response.json()

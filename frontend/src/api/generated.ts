@@ -53,6 +53,7 @@ export interface CategoryCreate {
   "kind"?: "expense" | "personal" | "savings"
   "owner_id"?: string | null
   "parent_id"?: string | null
+  "allows_subcategories"?: boolean
 }
 
 export interface CategoryReorder {
@@ -64,6 +65,7 @@ export interface CategoryUpdate {
   "expected_revision": number
   "name": string
   "active": boolean
+  "allows_subcategories"?: boolean | null
 }
 
 export interface CommentCreate {
@@ -128,6 +130,11 @@ export interface RequestCreate {
   "description"?: string
   "url"?: string | null
   "category_id"?: string | null
+}
+
+export interface RequestDeny {
+  "expected_revision": number
+  "reason": string
 }
 
 export interface RequestUpdate {
@@ -360,6 +367,24 @@ export interface request_create {
   "data": RequestCreate
 }
 
+export interface request_delete {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "request.delete"
+  "data": Delete
+}
+
+export interface request_deny {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "request.deny"
+  "data": RequestDeny
+}
+
 export interface request_update {
   "operation_id": string
   "entity_id": string
@@ -474,6 +499,8 @@ export interface Payloads {
   "request.create": RequestCreate
   "request.update": RequestUpdate
   "request.cancel": Delete
+  "request.delete": Delete
+  "request.deny": RequestDeny
   "vote.set": VoteSet
   "comment.create": CommentCreate
   "notification.read": Delete

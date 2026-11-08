@@ -53,7 +53,9 @@ categories = Table('categories', metadata, *record_columns(),
     Column('owner_id', String, ForeignKey('users.id')), Column('parent_id', String, ForeignKey('categories.id')),
     Column('active', Boolean, nullable=False),
     CheckConstraint("kind IN ('expense','personal','savings')"),
-    CheckConstraint("(kind = 'personal' AND owner_id IS NOT NULL) OR (kind != 'personal' AND owner_id IS NULL AND parent_id IS NULL)"))
+    Column('allows_subcategories', Boolean, nullable=False, server_default='0'),
+    CheckConstraint("(kind = 'personal' AND owner_id IS NOT NULL) OR (kind = 'expense' AND owner_id IS NULL) OR (kind = 'savings' AND owner_id IS NULL AND parent_id IS NULL)"),
+    CheckConstraint('parent_id IS NULL OR allows_subcategories = 0'))
 Index('one_personal_parent', categories.c.owner_id, unique=True,
       sqlite_where=(categories.c.kind == 'personal') & categories.c.parent_id.is_(None))
 RESOURCES.update({'users': users, 'categories': categories})
@@ -109,7 +111,7 @@ approval_requests = Table('approval_requests', metadata, *record_columns(),
     Column('amount_minor', Integer, nullable=False), Column('description', String, nullable=False), Column('url', String),
     Column('category_id', String, ForeignKey('categories.id')), Column('status', String, nullable=False),
     Column('purchase_id', String, unique=True), Column('approved_revision', Integer), CheckConstraint('amount_minor > 0'),
-    CheckConstraint("status IN ('open','canceled','purchased')"))
+    CheckConstraint("status IN ('open','canceled','purchased','denied')"))
 approval_votes = Table('approval_votes', metadata, *record_columns(),
     Column('request_id', String, ForeignKey('approval_requests.id'), nullable=False),
     Column('reviewer_id', String, ForeignKey('users.id'), nullable=False), Column('approved', Boolean, nullable=False),

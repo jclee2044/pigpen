@@ -70,8 +70,15 @@ def migrate(settings, target='head'):
     with sqlite3.connect(settings.database_path) as raw:
         raw.execute('PRAGMA journal_mode=WAL')
     with db.engine.connect().execution_options(write=True) as conn:
-        with conn.begin():
-            config = migration_config()
-            config.attributes['connection'] = conn
-            command.upgrade(config, target)
+        raw = conn.connection.driver_connection
+        raw.execute('PRAGMA foreign_keys=OFF')
+        try:
+            with conn.begin():
+                config = migration_config()
+                config.attributes['connection'] = conn
+                command.upgrade(config, target)
+                if conn.exec_driver_sql('PRAGMA foreign_key_check').first():
+                    raise ValueError('Migration failed foreign key validation')
+        finally:
+            raw.execute('PRAGMA foreign_keys=ON')
     db.engine.dispose()

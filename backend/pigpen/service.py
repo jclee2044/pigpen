@@ -21,7 +21,13 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
 
     def execute(self, operation):
         op = operation.model_dump(mode='json')
-        digest = sha256(json.dumps(op, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        # Preserve hashes of category commands saved by clients before 0009.
+        digest_op = {**op, 'data': dict(op['data'])}
+        if op['kind'] == 'category.create' and not op['data']['allows_subcategories']:
+            digest_op['data'].pop('allows_subcategories')
+        elif op['kind'] == 'category.update' and op['data']['allows_subcategories'] is None:
+            digest_op['data'].pop('allows_subcategories')
+        digest = sha256(json.dumps(digest_op, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         try:
             with self.db.transaction(write=True) as conn:
                 prior = conn.execute(select(s.operations).where(s.operations.c.id == op['operation_id'])).mappings().first()
@@ -75,9 +81,9 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
                       revision=1, deleted=False, created_at=timestamp, updated_at=timestamp)
         c.execute(insert(s.households).values(**record))
         self.changed(c, s.households, record)
-        for name in ['Housing', 'Food', 'Gas', 'Dates', 'Savings', 'Phone', 'Car insurance']:
+        for name in ['Housing', 'Food', 'Gas', 'Dates', 'Savings', 'Phone', 'Car insurance', 'Subscriptions']:
             self.save(c, s.categories, dict(id=str(uuid5(NAMESPACE_URL, op['entity_id'] + '/' + name)), name=name,
-                kind='savings' if name == 'Savings' else 'expense', owner_id=None, parent_id=None, active=True))
+                kind='savings' if name == 'Savings' else 'expense', owner_id=None, parent_id=None, active=True, allows_subcategories=name=='Subscriptions'))
         return record
 
     def validate_avatar(self, avatar):
@@ -91,7 +97,7 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
         self.validate_avatar(data['avatar'])
         record = self.save(c, s.users, dict(id=op['entity_id'], **data, name_key=data['name'].casefold(), active=True))
         self.save(c, s.categories, dict(id=str(uuid5(NAMESPACE_URL, op['entity_id'] + '/personal')), name=data['name']+' Personal',
-            kind='personal', owner_id=op['entity_id'], parent_id=None, active=True))
+            kind='personal', owner_id=op['entity_id'], parent_id=None, active=True, allows_subcategories=True))
         return record
 
     def do_user_update(self, c, op):
@@ -117,8 +123,14 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
             parent = get(c, s.categories, data['parent_id'], active=True)
             if parent['kind'] != 'personal' or parent['parent_id'] or parent['owner_id'] != data['owner_id']:
                 raise DomainError('category', 'Invalid Personal parent or owner')
-        elif data['parent_id'] or data['owner_id']:
-            raise DomainError('category', 'Only Personal categories have parents or owners')
+        elif data['owner_id']:
+            raise DomainError('category', 'Shared categories cannot have an owner')
+        elif data['parent_id']:
+            parent = get(c, s.categories, data['parent_id'], active=True)
+            if parent['kind'] != 'expense' or parent['parent_id'] or not parent['allows_subcategories']:
+                raise DomainError('category', 'Choose a shared parent that allows subcategories')
+        if data['parent_id'] and data['allows_subcategories']:
+            raise DomainError('category', 'Subcategories cannot contain subcategories')
         return self.save(c, s.categories, dict(id=op['entity_id'], **data, active=True))
 
     def do_category_reorder(self, c, op):
@@ -140,4 +152,14 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
             raise DomainError('actor', 'Only the owner can edit a Personal category', 403)
         if row['kind'] == 'personal' and not row['parent_id'] and not data['active']:
             raise DomainError('category', 'Archive the profile to archive its Personal parent')
+        allows = data.pop('allows_subcategories', None)
+        if allows is not None:
+            if allows and (row['parent_id'] or row['kind'] == 'savings'):
+                raise DomainError('category', 'Only top-level expense categories can enable subcategories')
+            if not allows and row['kind'] == 'personal' and not row['parent_id']:
+                raise DomainError('category', 'Personal parents always allow subcategories')
+            if not allows and c.execute(select(s.categories.c.id).where(
+                    s.categories.c.parent_id == row['id'], s.categories.c.deleted.is_(False))).first():
+                raise DomainError('category', 'Keep subcategories enabled while children exist')
+            data['allows_subcategories'] = allows
         return self.save(c, s.categories, data, row)
