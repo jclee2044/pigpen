@@ -25,7 +25,6 @@ def notification_message(c,op,kind,resource,target):
         'request.created':f'{actor} submitted {item} for approval',
         'request.revised':f'{actor} updated the approval request for {item}',
         'request.canceled':f'{actor} canceled the approval request for {item}',
-        'request.denied':f'{actor} denied the approval request for {item}',
         'approval.on':f'{actor} approved {item}',
         'approval.off':f'{actor} removed approval for {item}',
         'comment.created':f'{actor} commented on {item}',

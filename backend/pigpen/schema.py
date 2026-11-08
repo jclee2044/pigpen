@@ -112,7 +112,7 @@ approval_requests = Table('approval_requests', metadata, *record_columns(),
     Column('amount_minor', Integer, nullable=False), Column('description', String, nullable=False), Column('url', String),
     Column('category_id', String, ForeignKey('categories.id')), Column('status', String, nullable=False),
     Column('purchase_id', String, unique=True), Column('approved_revision', Integer), CheckConstraint('amount_minor > 0'),
-    CheckConstraint("status IN ('open','canceled','purchased','denied')"))
+    CheckConstraint("status IN ('open','canceled','purchased')"))
 approval_votes = Table('approval_votes', metadata, *record_columns(),
     Column('request_id', String, ForeignKey('approval_requests.id'), nullable=False),
     Column('reviewer_id', String, ForeignKey('users.id'), nullable=False), Column('approved', Boolean, nullable=False),

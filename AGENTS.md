@@ -13,3 +13,4 @@
 - Do not implement PigPen features during initial setup. Database tooling, PWA tooling, authentication, notifications, synchronization, OCR, and AI dependencies require later justification.
 - Ask for approval before creating the initial scaffold commit. Do not configure remotes, push, rewrite history, or switch branches without explicit instruction.
 - Report commands run, files changed, checks performed, and anything not verified.
+- Deploy verified application changes to the existing PigPen installation after changes; retain the previous release for rollback and verify the live result. This standing authorization does not cover unrelated machine configuration, dependency installation, or destructive actions.

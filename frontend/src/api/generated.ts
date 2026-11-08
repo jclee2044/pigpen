@@ -132,11 +132,6 @@ export interface RequestCreate {
   "category_id"?: string | null
 }
 
-export interface RequestDeny {
-  "expected_revision": number
-  "reason": string
-}
-
 export interface RequestUpdate {
   "item": string
   "amount_minor": number
@@ -367,24 +362,6 @@ export interface request_create {
   "data": RequestCreate
 }
 
-export interface request_delete {
-  "operation_id": string
-  "entity_id": string
-  "actor_id"?: string | null
-  "client_time": string
-  "kind": "request.delete"
-  "data": Delete
-}
-
-export interface request_deny {
-  "operation_id": string
-  "entity_id": string
-  "actor_id"?: string | null
-  "client_time": string
-  "kind": "request.deny"
-  "data": RequestDeny
-}
-
 export interface request_update {
   "operation_id": string
   "entity_id": string
@@ -509,8 +486,6 @@ export interface Payloads {
   "request.create": RequestCreate
   "request.update": RequestUpdate
   "request.cancel": Delete
-  "request.delete": Delete
-  "request.deny": RequestDeny
   "vote.set": VoteSet
   "comment.create": CommentCreate
   "notification.read": Delete

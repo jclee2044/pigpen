@@ -6,6 +6,7 @@ PigPen is a shared household budget and spending PWA for mobile and desktop. It 
 
 - [Functionality and release scope](docs/functionality.md): profiles, monthly allocations, purchases, wish lists, approvals, notifications, and offline behavior.
 - [Architecture](docs/architecture.md): application boundaries, proposed data model, API, synchronization, deployment, and verification.
+- [UI design reference](docs/ui-design.md): accepted visual direction, desktop/mobile mockups, and notification layouts.
 
 These documents capture the decisions made on November 6, 2026. Items explicitly labeled **proposed defaults** remain open to revision; they are not confirmed requirements. This repository currently contains documentation, not an implemented application.
 

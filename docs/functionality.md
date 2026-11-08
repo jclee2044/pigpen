@@ -33,10 +33,11 @@ Initial shared categories:
 - Savings
 - Phone
 - Car insurance
+- Subscriptions (supports subcategories)
 
 Each user additionally has their own Personal category, visibly labeled with their name. Users may create, rename, and archive additional categories. Archiving removes a category from new-entry choices while preserving its transactions and historical allocations.
 
-Only Personal categories can contain subcategories. Subcategories are defined by the user and have one nesting level. The parent Personal category represents that user's allowance; spending in its subcategories counts toward that allowance exactly once.
+Personal categories and shared expense categories with “Allow subcategories” enabled can contain user-defined subcategories, with one nesting level. Subscriptions supports subcategories by default. Users choose whether new shared categories allow subcategories, and can enable this later through category management. Each parent holds the budget; spending in its subcategories counts toward that budget exactly once. Subcategories have no separate allocations. Savings does not support subcategories.
 
 **Proposed defaults:**
 
@@ -82,7 +83,7 @@ Future extraction must run on the home server, propose a total and relevant deta
 
 ## 6. Wish lists
 
-Each item contains a name, price, description, and optional link, and records its owner and creation time. All users can view household wish lists. Creating an item notifies the other users.
+Each item contains a name, price, description, and optional link, and records its owner and creation time. All users can view household wish lists. Creating an item notifies the other users. Wish cards show the item/service name on the left and price on the right in a shared row, with both fonts 30% smaller than the previous card layout. Long names wrap within the left side. Tapping anywhere on a wish card opens its detail view. The list has no separate View wish or Ask for approval buttons; Ask for approval is available in the detail view.
 
 **Proposed defaults:** the creator manages the item; support active, purchased, and archived states. A wish-list item may be used to prefill an approval request or purchase, but neither is created automatically. Marking an item purchased does not itself record spending.
 
@@ -158,3 +159,36 @@ Confirmed November 6, 2026: pig avatars support independently swappable hats, gl
 Confirmed during backend implementation on November 6, 2026: use USD and America/New_York, copy prior-month allocations without carrying unused funds forward, allocate Personal allowances only on parent categories, and require approval from every other active household profile. These confirmations supersede the earlier corresponding proposals, including the one-reviewer approval proposal in section 7. All other proposed behavior retains its stated status.
 
 The actual financial database and its attachments/backups/private configuration must be separate from the source checkout and GitHub. The backend enforces external runtime paths and separate environment registration. See [implemented API contract](backend-api.md), [operations and recovery](backend-operations.md), and [verification gates](backend-progress.md). Profile avatar choices are persisted by the API; frontend integration remains future work.
+
+## 13. Recurring budget and empty states — November 7, 2026
+
+Confirmed: budgets automatically continue from the latest earlier saved plan across months, with monthly edits retained as overrides. This supersedes the manual previous-month copy behavior in sections 3 and 12. Expected income also continues; actual spending and unused money do not. See the API contract for inheritance details. All empty collections use the shared pig illustration and “Nothing here yet” copy. Narrow-screen filters must stack without overlapping native date/month/select controls.
+
+## Profile entry screen — confirmed November 7, 2026
+
+On devices without a selected active profile, show a separate entry screen with the stacked PigPen logo, “Choose or create your profile”, the existing profile cards and Add profile action. Hide the app header/menu, desktop sidebar and bottom navigation until selection. Selecting or creating a profile enters the application. Remember the selection locally for subsequent launches; an inactive/missing selection returns to entry. This clarifies the original profile-selection requirement without changing attribution or the API contract.
+
+## Budget allocation units — November 8, 2026
+
+Confirmed request: below expected income in Edit budget, provide Dollars and Percentages tabs. Switching automatically shows the equivalent value for each category; save both amount and percentage.
+
+Implementation choices: percentages use expected income, display two decimal places, and convert to cents with half-up rounding. Switching views keeps exact cents unchanged. Income changes preserve allocated dollars and recalculate percentages. Zero income preserves amounts and disables percentage entry until a positive income is entered. Over-budget allocations remain allowed. These calculation choices are documented behavior rather than additional user-confirmed requirements.
+
+November 8, 2026 confirmation: notifications must be accessible at the top of the app and use real browser/OS push delivery. The header bell opens the recipient inbox with an unread count; the inbox also exposes device push opt-in. Permission remains an explicit device action.
+
+November 8 correction: “at the top” means a temporary incoming-notification banner, not a persistent header bell. Keep the bell, inbox link and unread count in the household dropdown. Show a tappable, dismissible top banner for new notifications while using PigPen; retain OS push for background delivery. Lower the mobile navigation row toward the screen bottom. This supersedes the earlier persistent-header interpretation.
+
+
+Notification permission onboarding — November 8, 2026 (confirmed request): ask users to enable notifications on first entry. Implementation choices: display the prompt after household/profile selection when push is configured and the service worker is ready; request browser permission only from the Enable notifications button. Not now/Escape dismisses it for this browser installation, with later controls in Settings. Existing granted/denied permission is respected. iPhone Safari shows Home Screen installation guidance; that dismissal does not suppress the installed-app prompt. Unsupported browsers retain the inbox. No JSON contract changes.
+
+Notification settings explanation (confirmed request): label push controls with their purpose and explain that alerts contain a generic message without amounts, purchase details or other financial information; users open PigPen for details.
+
+
+Category display order — November 8, 2026 (confirmed): Personal categories and their subcategories appear at the bottom of category lists throughout the app, including dropdowns. Shared and Personal groups retain their saved household order internally; children follow their parent. Personal-last takes precedence over older saved orders. Spending breakdowns retain descending spending within each group. No financial records or API shapes change.
+
+Wish deletion — November 8, 2026 (confirmed request): swipe left on a wish card to reveal an iPhone-style Delete action, then ask for confirmation before deleting. Implementation choices: preserve existing owner-only management; provide Delete wish in the detail dialog for keyboard/desktop access; retain history via a tombstone, and require connectivity.
+
+
+Category dropdown consistency — November 8, 2026 (confirmed): every category dropdown must preserve the exact relative order shown in Manage categories. Forms may omit ineligible entries (such as Savings or archived categories); omission must not reorder the remaining categories. Placeholder options are not categories. Shared ordering comes from the common category selector, with Personal last and children after their parent.
+
+November 8, 2026 confirmed notification wording update: show who did what in phone push alerts, the inbox and incoming banners, including item names when relevant (for example, `Alex just added "Switch 2" to the wish list`, `Sam submitted "Lawn chair" for approval`, `Sam added a purchase: "Lawn chair"`). Send new purchase alerts to other active profiles. Exclude financial numbers such as amounts, prices, balances and percentages; preserve numbers within item names. Do not include descriptions, merchant information or comment bodies. This supersedes the earlier generic-only notification preview/settings wording. Existing historical notifications can keep generic text.
