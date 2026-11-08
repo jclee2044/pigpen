@@ -62,7 +62,7 @@ class BudgetServices:
                 if not cat['active'] and (not previous or previous['amount_minor']!=a['amount_minor']):
                     raise DomainError('allocations','Archived category allocations can only be retained unchanged')
                 if cat['parent_id']:
-                    raise DomainError('allocations','Personal children classify purchases; allocate to the parent')
+                    raise DomainError('allocations','Subcategories classify purchases; allocate to the parent')
             savings_ids=[a['category_id'] for a in new_allocations if get(c,s.categories,a['category_id'])['kind']=='savings']
             if len(savings_ids)>1:
                 raise DomainError('allocations','Use the shared Savings category')
@@ -96,6 +96,7 @@ class BudgetServices:
     def do_purchase_create(self,c,op):
         data=self.purchase_values(c,op)
         result=self.save(c,s.purchases,dict(id=op['entity_id'],purchaser_id=op['actor_id'],**data,bill_id=None,bill_due=None))
+        self.notify(c,op,'purchase.created','purchases',result['id'])
         self.spending_alerts(c,result['transaction_date'][:7],op,result['category_id'])
         return result
 

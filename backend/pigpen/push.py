@@ -155,6 +155,9 @@ def deliver_once(db,sender=None):
         c.execute(update(s.outbox).where(s.outbox.c.id==job['id']).values(lease_token=token,
             lease_until=(datetime.now(timezone.utc)+timedelta(minutes=5)).isoformat()))
     with db.transaction() as c:
+        notification=get(c,s.notifications,job['notification_id'])
+        payload={'notification_id':job['notification_id'],'url':'/notifications','tag':job['notification_id'],
+                 'title':'PigPen','body':notification['message'] or 'A household update is waiting.'}
         recipients=[dict(r) for r in c.execute(select(s.subscriptions,s.installations.c.revision.label('binding_revision'))
             .join(s.installations,s.subscriptions.c.installation_id==s.installations.c.id)
             .join(s.users,s.installations.c.user_id==s.users.c.id)
@@ -171,7 +174,7 @@ def deliver_once(db,sender=None):
             if binding['user_id']!=job['recipient_id'] or binding['revision']!=subscription['binding_revision'] or current['revision']!=subscription['revision'] or not current['active']:
                 continue
         try:
-            status=sender(subscription,{'notification_id':job['notification_id'],'url':'/notifications','tag':job['notification_id']})
+            status=sender(subscription,payload)
         except Exception:
             status=503
         with db.transaction(write=True) as c:

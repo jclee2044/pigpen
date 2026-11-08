@@ -58,12 +58,12 @@ def test_shared_budget_alerts_are_deduplicated_and_targeted(client,users):
     submit(client,'budget.set',dict(month='2026-11',allocations=[dict(category_id=food['id'],amount_minor=100),dict(category_id=gas['id'],amount_minor=10000)]),actor)
     for amount in [100,1,1]:
         submit(client,'purchase.create',dict(item='Food',amount_minor=amount,category_id=food['id'],transaction_date='2026-11-06'),actor)
-    notes=client.get('/api/v1/notifications?limit=100').json()['items']
+    notes=[n for n in client.get('/api/v1/notifications?limit=100').json()['items'] if n['kind'].startswith('budget.')]
     assert len(notes)==6 # reached and exceeded, each once per active recipient.
     assert len(set((x['recipient_id'],x['event_key']) for x in notes))==6
     before=len(notes)
     submit(client,'purchase.create',dict(item='Gas',amount_minor=1,category_id=gas['id'],transaction_date='2026-11-06'),actor)
-    assert len(client.get('/api/v1/notifications?limit=100').json()['items'])==before
+    assert len([n for n in client.get('/api/v1/notifications?limit=100').json()['items'] if n['kind'].startswith('budget.')])==before
 
 
 def test_public_contract_documents_typed_operations(client):

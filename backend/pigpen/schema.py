@@ -36,6 +36,7 @@ notifications = Table('notifications', metadata, *record_columns(),
     Column('recipient_id', String, nullable=False), Column('event_key', String, nullable=False),
     Column('kind', String, nullable=False), Column('target_resource', String, nullable=False),
     Column('target_id', String, nullable=False), Column('read_at', String),
+    Column('message', String, nullable=False, server_default=''),
     UniqueConstraint('recipient_id', 'event_key'))
 outbox = Table('outbox', metadata,
     Column('id', String, primary_key=True), Column('notification_id', String, ForeignKey('notifications.id'), nullable=False, unique=True),

@@ -64,6 +64,7 @@ class FinanceServices:
             purchase=self.save(c,s.purchases,dict(id=op['entity_id'],purchaser_id=op['actor_id'],category_id=bill['category_id'],
                 item=bill['name'],amount_minor=data['amount_minor'] or bill['amount_minor'],transaction_date=data['transaction_date'],
                 merchant=None,description=bill['description'],request_id=None,bill_id=bill['id'],bill_due=due))
+            self.notify(c,op,'purchase.created','purchases',purchase['id'])
             self.spending_alerts(c,purchase['transaction_date'][:7],op,purchase['category_id'])
         self.save(c,s.bill_occurrences,dict(id=str(uuid5(NAMESPACE_URL,bill['id']+'/'+due)),bill_id=bill['id'],due_date=due,
             expected_minor=bill['amount_minor'],purchase_id=purchase['id']))
