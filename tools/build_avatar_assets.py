@@ -58,21 +58,42 @@ hats={
 'beret':path('M168 125 Q140 79 212 69 Q290 47 337 87 Q369 118 320 140 L189 144 Z','#b95c77')+path('M187 132 Q253 117 325 132 L321 151 Q255 138 191 151 Z','#89415c')+path('M255 66 Q252 52 263 48','none','stroke="#89415c" stroke-width="10"')}
 manifest['groups']['hat']=[{'id':'none','label':'No hat','file':None}]+[write('hat',k,v) for k,v in hats.items()]
 glasses={}
-for name in ['round','square','sunglasses','cat-eye','monocle']:
+for name in ['round','square','sunglasses','cat-eye','monocle','rounded','aviator','browline']:
     b=''
     if name=='monocle':
         b=ellipse(307,226,27,27,'none','stroke="#a77d37" stroke-width="5"')+path('M331 239 Q358 287 328 315','none','stroke="#a77d37" stroke-width="3"')
     else:
-        color='#49343f' if name in ['round','sunglasses'] else ('#a54465' if name=='cat-eye' else '#345e6e')
+        color='#49343f' if name in ['round','sunglasses'] else ('#a54465' if name=='cat-eye' else '#222222')
         b=path('M175 222 L157 212 M337 222 L355 212 M233 223 Q256 213 279 223','none',f'stroke="{color}" stroke-width="6"')
         for x in [205,307]:
             if name=='round': b+=ellipse(x,226,28,28,'none',f'stroke="{color}" stroke-width="6"')
+            elif name=='rounded':
+                b+=path(f'M{x-33} 211 Q{x} 199 {x+33} 211 L{x+29} 237 Q{x+24} 256 {x} 256 Q{x-24} 256 {x-29} 237 Z','none',f'stroke="{color}" stroke-width="6"')
+                b+=path(f'M{x-29} 213 L{x-25} 213','none','stroke="#d4c6a7" stroke-width="2"')
+            elif name=='aviator': b+=path(f'M{x-29} 213 Q{x} 202 {x+29} 213 L{x+27} 236 Q{x+21} 258 {x} 250 Q{x-31} 244 {x-29} 213 Z','none',f'stroke="{color}" stroke-width="4"')
+            elif name=='browline':
+                b+=ellipse(x,228,29,25,'none',f'stroke="{color}" stroke-width="3"')
+                b+=path(f'M{x-29} 218 Q{x} 201 {x+29} 218','none',f'stroke="{color}" stroke-width="9"')
             elif name=='cat-eye': b+=path(f'M{x-32} 209 L{x+29} 214 Q{x+32} 248 {x} 248 Q{x-25} 248 {x-32} 209 Z','none',f'stroke="{color}" stroke-width="6"')
             else:
                 b+=f'<rect x="{x-29}" y="207" width="58" height="40" rx="12" fill="{"#343642" if name=="sunglasses" else "none"}" stroke="{color}" stroke-width="6"/>'
                 if name=='sunglasses': b+=path(f'M{x-15} 220 L{x+2} 216','none','stroke="#8eabb6" stroke-width="4"')
     glasses[name]=b
-manifest['groups']['glasses']=[{'id':'none','label':'No glasses','file':None}]+[write('glasses',k,v) for k,v in glasses.items()]
+# Keep original IDs and artwork; new colors use explicit manifest IDs.
+frame_colors={'original':None,'black':'#222222','tortoiseshell':'url(#tortoise)','brown':'#75452f','gold':'#b88935','rose':'#b64d73','blue':'#376ba1','teal':'#247e7b','purple':'#7952a1'}
+pattern='<defs><pattern id="tortoise" patternUnits="userSpaceOnUse" width="29" height="23"><rect width="29" height="23" fill="#30231d" stroke="none"/><path d="M2 2L10 0L14 7L6 12Z M21 15L29 12L29 22L23 23Z" fill="#b65d23" stroke="none"/><path d="M5 4L9 3L10 7L7 9Z M24 17L28 16L28 20L25 21Z" fill="#e6aa52" stroke="none"/></pattern></defs>'
+manifest['groups']['glasses']=[{'id':'none','label':'No glasses','file':None,'shape':'none','frameColor':'original'}]
+for shape,body in glasses.items():
+    for shade,color in frame_colors.items():
+        artwork=body
+        if color:
+            for old in ['#49343f','#a54465','#222222','#a77d37']:
+                artwork=artwork.replace(f'stroke="{old}"',f'stroke="{color}"')
+        if shade=='tortoiseshell': artwork=pattern+artwork
+        identifier=shape if shade=='original' else f'{shape}-{shade}'
+        item=write('glasses',identifier,artwork)
+        item.update(shape=shape,frameColor=shade,label=shape.replace('-',' ').title()+('' if shade=='original' else ' · '+shade.title()))
+        manifest['groups']['glasses'].append(item)
 # Lashes belong to the eyes and sit behind eyewear; opaque sunglasses hide them.
 lashes = path('M197 215 Q189 214 186 208 M195 221 Q186 221 182 216 M196 227 Q187 230 183 226 M315 215 Q323 214 326 208 M317 221 Q326 221 330 216 M316 227 Q325 230 329 226', 'none', 'stroke="#41272b" stroke-width="4"')
 manifest['groups']['eyelashes']=[{'id':'none','label':'No eyelashes','file':None}, {**write('eyelashes','classic',lashes),'label':'Eyelashes'}]
@@ -92,8 +113,8 @@ for(const group of ['background','hat','bandana','glasses','eyelashes']){const f
 document.querySelector('#download').onclick=()=>{const url=URL.createObjectURL(new Blob([composite()],{type:'image/svg+xml'}));const a=document.createElement('a');a.href=url;a.download='pigpen-'+Object.values(selected).join('-')+'.svg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};render();
 </script></html>'''
 (ROOT/'preview.html').write_text(html.replace('__DATA__',data))
-# A compact contact sheet covers every accessory at least once.
-choices=[('cream','none','none','none'),('sage','baseball-cap','grass','round'),('sky','beanie','coral','square'),('lilac','beret','gold','cat-eye'),('peach','bucket-hat','teal','sunglasses'),('butter','party-hat','purple','none'),('rose','crown','blue','monocle'),('slate','none','rose','round')]
+# Representative combinations, including the reference-inspired tortoiseshell frames.
+choices=[('cream','none','none','none'),('sage','baseball-cap','grass','round'),('sky','beanie','coral','square'),('lilac','beret','gold','cat-eye'),('peach','bucket-hat','teal','sunglasses'),('butter','party-hat','purple','none'),('rose','crown','blue','monocle'),('slate','none','rose','rounded-tortoiseshell')]
 sheet=[]
 for i, combo in enumerate(choices):
     selection=dict(zip(['background','hat','bandana','glasses'],combo)); selection['eyelashes']='classic' if i > 0 else 'none'; inner=''
@@ -102,4 +123,5 @@ for i, combo in enumerate(choices):
         if file: inner+=assets[file].split('>',1)[1].rsplit('</svg>',1)[0]
     sheet.append(f'<svg x="{(i%4)*256}" y="{(i//4)*256}" width="256" height="256" viewBox="0 0 512 512">{inner}</svg>')
 (ROOT/'contact-sheet.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="512">'+''.join(sheet)+'</svg>')
-print(f'Built {len(assets)} layers; 6,048 combinations; preview and contact sheet.')
+from math import prod
+print(f'Built {len(assets)} layers; {prod(len(v) for v in manifest["groups"].values()):,} combinations; preview and contact sheet.')

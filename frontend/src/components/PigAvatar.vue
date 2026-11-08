@@ -9,5 +9,5 @@ const layers = computed(()=>{
  return ['background/'+value.background,'base/pig','bandana/'+value.bandana,'eyelashes/'+value.eyelashes,'glasses/'+value.glasses,'hat/'+value.hat].filter(x=>!x.endsWith('/none')).map(x=>files['../../../assets/avatars/pig-v1/'+x+'.svg']).filter(Boolean)
 })
 </script>
-<template><span class="pig-avatar" role="img" :aria-label="label" :style="{width:size+'px',height:size+'px'}"><img v-for="(src,i) in layers" :key="i" :src="src" alt="" /></span></template>
-<style scoped>.pig-avatar{position:relative;display:inline-block;flex-shrink:0;border-radius:50%;overflow:hidden;background:var(--blush)}img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}</style>
+<template><span class="pig-avatar" role="img" :aria-label="label" :style="{width:size+'px',height:size+'px'}"><img v-for="(src,i) in layers" :key="i" :src="src" :class="{portrait:i>0}" alt="" /></span></template>
+<style scoped>.pig-avatar{position:relative;display:inline-block;flex-shrink:0;border-radius:50%;overflow:hidden;background:var(--blush)}img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.portrait{inset:auto;left:-17.692308%;top:-11.346154%;width:135.384615%;height:135.384615%}</style>

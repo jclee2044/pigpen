@@ -166,32 +166,513 @@
       {
         "id": "none",
         "label": "No glasses",
-        "file": null
+        "file": null,
+        "shape": "none",
+        "frameColor": "original"
       },
       {
         "id": "round",
         "label": "Round",
-        "file": "glasses/round.svg"
+        "file": "glasses/round.svg",
+        "shape": "round",
+        "frameColor": "original"
+      },
+      {
+        "id": "round-black",
+        "label": "Round \u00b7 Black",
+        "file": "glasses/round-black.svg",
+        "shape": "round",
+        "frameColor": "black"
+      },
+      {
+        "id": "round-tortoiseshell",
+        "label": "Round \u00b7 Tortoiseshell",
+        "file": "glasses/round-tortoiseshell.svg",
+        "shape": "round",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "round-brown",
+        "label": "Round \u00b7 Brown",
+        "file": "glasses/round-brown.svg",
+        "shape": "round",
+        "frameColor": "brown"
+      },
+      {
+        "id": "round-gold",
+        "label": "Round \u00b7 Gold",
+        "file": "glasses/round-gold.svg",
+        "shape": "round",
+        "frameColor": "gold"
+      },
+      {
+        "id": "round-rose",
+        "label": "Round \u00b7 Rose",
+        "file": "glasses/round-rose.svg",
+        "shape": "round",
+        "frameColor": "rose"
+      },
+      {
+        "id": "round-blue",
+        "label": "Round \u00b7 Blue",
+        "file": "glasses/round-blue.svg",
+        "shape": "round",
+        "frameColor": "blue"
+      },
+      {
+        "id": "round-teal",
+        "label": "Round \u00b7 Teal",
+        "file": "glasses/round-teal.svg",
+        "shape": "round",
+        "frameColor": "teal"
+      },
+      {
+        "id": "round-purple",
+        "label": "Round \u00b7 Purple",
+        "file": "glasses/round-purple.svg",
+        "shape": "round",
+        "frameColor": "purple"
       },
       {
         "id": "square",
         "label": "Square",
-        "file": "glasses/square.svg"
+        "file": "glasses/square.svg",
+        "shape": "square",
+        "frameColor": "original"
+      },
+      {
+        "id": "square-black",
+        "label": "Square \u00b7 Black",
+        "file": "glasses/square-black.svg",
+        "shape": "square",
+        "frameColor": "black"
+      },
+      {
+        "id": "square-tortoiseshell",
+        "label": "Square \u00b7 Tortoiseshell",
+        "file": "glasses/square-tortoiseshell.svg",
+        "shape": "square",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "square-brown",
+        "label": "Square \u00b7 Brown",
+        "file": "glasses/square-brown.svg",
+        "shape": "square",
+        "frameColor": "brown"
+      },
+      {
+        "id": "square-gold",
+        "label": "Square \u00b7 Gold",
+        "file": "glasses/square-gold.svg",
+        "shape": "square",
+        "frameColor": "gold"
+      },
+      {
+        "id": "square-rose",
+        "label": "Square \u00b7 Rose",
+        "file": "glasses/square-rose.svg",
+        "shape": "square",
+        "frameColor": "rose"
+      },
+      {
+        "id": "square-blue",
+        "label": "Square \u00b7 Blue",
+        "file": "glasses/square-blue.svg",
+        "shape": "square",
+        "frameColor": "blue"
+      },
+      {
+        "id": "square-teal",
+        "label": "Square \u00b7 Teal",
+        "file": "glasses/square-teal.svg",
+        "shape": "square",
+        "frameColor": "teal"
+      },
+      {
+        "id": "square-purple",
+        "label": "Square \u00b7 Purple",
+        "file": "glasses/square-purple.svg",
+        "shape": "square",
+        "frameColor": "purple"
       },
       {
         "id": "sunglasses",
         "label": "Sunglasses",
-        "file": "glasses/sunglasses.svg"
+        "file": "glasses/sunglasses.svg",
+        "shape": "sunglasses",
+        "frameColor": "original"
+      },
+      {
+        "id": "sunglasses-black",
+        "label": "Sunglasses \u00b7 Black",
+        "file": "glasses/sunglasses-black.svg",
+        "shape": "sunglasses",
+        "frameColor": "black"
+      },
+      {
+        "id": "sunglasses-tortoiseshell",
+        "label": "Sunglasses \u00b7 Tortoiseshell",
+        "file": "glasses/sunglasses-tortoiseshell.svg",
+        "shape": "sunglasses",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "sunglasses-brown",
+        "label": "Sunglasses \u00b7 Brown",
+        "file": "glasses/sunglasses-brown.svg",
+        "shape": "sunglasses",
+        "frameColor": "brown"
+      },
+      {
+        "id": "sunglasses-gold",
+        "label": "Sunglasses \u00b7 Gold",
+        "file": "glasses/sunglasses-gold.svg",
+        "shape": "sunglasses",
+        "frameColor": "gold"
+      },
+      {
+        "id": "sunglasses-rose",
+        "label": "Sunglasses \u00b7 Rose",
+        "file": "glasses/sunglasses-rose.svg",
+        "shape": "sunglasses",
+        "frameColor": "rose"
+      },
+      {
+        "id": "sunglasses-blue",
+        "label": "Sunglasses \u00b7 Blue",
+        "file": "glasses/sunglasses-blue.svg",
+        "shape": "sunglasses",
+        "frameColor": "blue"
+      },
+      {
+        "id": "sunglasses-teal",
+        "label": "Sunglasses \u00b7 Teal",
+        "file": "glasses/sunglasses-teal.svg",
+        "shape": "sunglasses",
+        "frameColor": "teal"
+      },
+      {
+        "id": "sunglasses-purple",
+        "label": "Sunglasses \u00b7 Purple",
+        "file": "glasses/sunglasses-purple.svg",
+        "shape": "sunglasses",
+        "frameColor": "purple"
       },
       {
         "id": "cat-eye",
         "label": "Cat Eye",
-        "file": "glasses/cat-eye.svg"
+        "file": "glasses/cat-eye.svg",
+        "shape": "cat-eye",
+        "frameColor": "original"
+      },
+      {
+        "id": "cat-eye-black",
+        "label": "Cat Eye \u00b7 Black",
+        "file": "glasses/cat-eye-black.svg",
+        "shape": "cat-eye",
+        "frameColor": "black"
+      },
+      {
+        "id": "cat-eye-tortoiseshell",
+        "label": "Cat Eye \u00b7 Tortoiseshell",
+        "file": "glasses/cat-eye-tortoiseshell.svg",
+        "shape": "cat-eye",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "cat-eye-brown",
+        "label": "Cat Eye \u00b7 Brown",
+        "file": "glasses/cat-eye-brown.svg",
+        "shape": "cat-eye",
+        "frameColor": "brown"
+      },
+      {
+        "id": "cat-eye-gold",
+        "label": "Cat Eye \u00b7 Gold",
+        "file": "glasses/cat-eye-gold.svg",
+        "shape": "cat-eye",
+        "frameColor": "gold"
+      },
+      {
+        "id": "cat-eye-rose",
+        "label": "Cat Eye \u00b7 Rose",
+        "file": "glasses/cat-eye-rose.svg",
+        "shape": "cat-eye",
+        "frameColor": "rose"
+      },
+      {
+        "id": "cat-eye-blue",
+        "label": "Cat Eye \u00b7 Blue",
+        "file": "glasses/cat-eye-blue.svg",
+        "shape": "cat-eye",
+        "frameColor": "blue"
+      },
+      {
+        "id": "cat-eye-teal",
+        "label": "Cat Eye \u00b7 Teal",
+        "file": "glasses/cat-eye-teal.svg",
+        "shape": "cat-eye",
+        "frameColor": "teal"
+      },
+      {
+        "id": "cat-eye-purple",
+        "label": "Cat Eye \u00b7 Purple",
+        "file": "glasses/cat-eye-purple.svg",
+        "shape": "cat-eye",
+        "frameColor": "purple"
       },
       {
         "id": "monocle",
         "label": "Monocle",
-        "file": "glasses/monocle.svg"
+        "file": "glasses/monocle.svg",
+        "shape": "monocle",
+        "frameColor": "original"
+      },
+      {
+        "id": "monocle-black",
+        "label": "Monocle \u00b7 Black",
+        "file": "glasses/monocle-black.svg",
+        "shape": "monocle",
+        "frameColor": "black"
+      },
+      {
+        "id": "monocle-tortoiseshell",
+        "label": "Monocle \u00b7 Tortoiseshell",
+        "file": "glasses/monocle-tortoiseshell.svg",
+        "shape": "monocle",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "monocle-brown",
+        "label": "Monocle \u00b7 Brown",
+        "file": "glasses/monocle-brown.svg",
+        "shape": "monocle",
+        "frameColor": "brown"
+      },
+      {
+        "id": "monocle-gold",
+        "label": "Monocle \u00b7 Gold",
+        "file": "glasses/monocle-gold.svg",
+        "shape": "monocle",
+        "frameColor": "gold"
+      },
+      {
+        "id": "monocle-rose",
+        "label": "Monocle \u00b7 Rose",
+        "file": "glasses/monocle-rose.svg",
+        "shape": "monocle",
+        "frameColor": "rose"
+      },
+      {
+        "id": "monocle-blue",
+        "label": "Monocle \u00b7 Blue",
+        "file": "glasses/monocle-blue.svg",
+        "shape": "monocle",
+        "frameColor": "blue"
+      },
+      {
+        "id": "monocle-teal",
+        "label": "Monocle \u00b7 Teal",
+        "file": "glasses/monocle-teal.svg",
+        "shape": "monocle",
+        "frameColor": "teal"
+      },
+      {
+        "id": "monocle-purple",
+        "label": "Monocle \u00b7 Purple",
+        "file": "glasses/monocle-purple.svg",
+        "shape": "monocle",
+        "frameColor": "purple"
+      },
+      {
+        "id": "rounded",
+        "label": "Rounded",
+        "file": "glasses/rounded.svg",
+        "shape": "rounded",
+        "frameColor": "original"
+      },
+      {
+        "id": "rounded-black",
+        "label": "Rounded \u00b7 Black",
+        "file": "glasses/rounded-black.svg",
+        "shape": "rounded",
+        "frameColor": "black"
+      },
+      {
+        "id": "rounded-tortoiseshell",
+        "label": "Rounded \u00b7 Tortoiseshell",
+        "file": "glasses/rounded-tortoiseshell.svg",
+        "shape": "rounded",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "rounded-brown",
+        "label": "Rounded \u00b7 Brown",
+        "file": "glasses/rounded-brown.svg",
+        "shape": "rounded",
+        "frameColor": "brown"
+      },
+      {
+        "id": "rounded-gold",
+        "label": "Rounded \u00b7 Gold",
+        "file": "glasses/rounded-gold.svg",
+        "shape": "rounded",
+        "frameColor": "gold"
+      },
+      {
+        "id": "rounded-rose",
+        "label": "Rounded \u00b7 Rose",
+        "file": "glasses/rounded-rose.svg",
+        "shape": "rounded",
+        "frameColor": "rose"
+      },
+      {
+        "id": "rounded-blue",
+        "label": "Rounded \u00b7 Blue",
+        "file": "glasses/rounded-blue.svg",
+        "shape": "rounded",
+        "frameColor": "blue"
+      },
+      {
+        "id": "rounded-teal",
+        "label": "Rounded \u00b7 Teal",
+        "file": "glasses/rounded-teal.svg",
+        "shape": "rounded",
+        "frameColor": "teal"
+      },
+      {
+        "id": "rounded-purple",
+        "label": "Rounded \u00b7 Purple",
+        "file": "glasses/rounded-purple.svg",
+        "shape": "rounded",
+        "frameColor": "purple"
+      },
+      {
+        "id": "aviator",
+        "label": "Aviator",
+        "file": "glasses/aviator.svg",
+        "shape": "aviator",
+        "frameColor": "original"
+      },
+      {
+        "id": "aviator-black",
+        "label": "Aviator \u00b7 Black",
+        "file": "glasses/aviator-black.svg",
+        "shape": "aviator",
+        "frameColor": "black"
+      },
+      {
+        "id": "aviator-tortoiseshell",
+        "label": "Aviator \u00b7 Tortoiseshell",
+        "file": "glasses/aviator-tortoiseshell.svg",
+        "shape": "aviator",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "aviator-brown",
+        "label": "Aviator \u00b7 Brown",
+        "file": "glasses/aviator-brown.svg",
+        "shape": "aviator",
+        "frameColor": "brown"
+      },
+      {
+        "id": "aviator-gold",
+        "label": "Aviator \u00b7 Gold",
+        "file": "glasses/aviator-gold.svg",
+        "shape": "aviator",
+        "frameColor": "gold"
+      },
+      {
+        "id": "aviator-rose",
+        "label": "Aviator \u00b7 Rose",
+        "file": "glasses/aviator-rose.svg",
+        "shape": "aviator",
+        "frameColor": "rose"
+      },
+      {
+        "id": "aviator-blue",
+        "label": "Aviator \u00b7 Blue",
+        "file": "glasses/aviator-blue.svg",
+        "shape": "aviator",
+        "frameColor": "blue"
+      },
+      {
+        "id": "aviator-teal",
+        "label": "Aviator \u00b7 Teal",
+        "file": "glasses/aviator-teal.svg",
+        "shape": "aviator",
+        "frameColor": "teal"
+      },
+      {
+        "id": "aviator-purple",
+        "label": "Aviator \u00b7 Purple",
+        "file": "glasses/aviator-purple.svg",
+        "shape": "aviator",
+        "frameColor": "purple"
+      },
+      {
+        "id": "browline",
+        "label": "Browline",
+        "file": "glasses/browline.svg",
+        "shape": "browline",
+        "frameColor": "original"
+      },
+      {
+        "id": "browline-black",
+        "label": "Browline \u00b7 Black",
+        "file": "glasses/browline-black.svg",
+        "shape": "browline",
+        "frameColor": "black"
+      },
+      {
+        "id": "browline-tortoiseshell",
+        "label": "Browline \u00b7 Tortoiseshell",
+        "file": "glasses/browline-tortoiseshell.svg",
+        "shape": "browline",
+        "frameColor": "tortoiseshell"
+      },
+      {
+        "id": "browline-brown",
+        "label": "Browline \u00b7 Brown",
+        "file": "glasses/browline-brown.svg",
+        "shape": "browline",
+        "frameColor": "brown"
+      },
+      {
+        "id": "browline-gold",
+        "label": "Browline \u00b7 Gold",
+        "file": "glasses/browline-gold.svg",
+        "shape": "browline",
+        "frameColor": "gold"
+      },
+      {
+        "id": "browline-rose",
+        "label": "Browline \u00b7 Rose",
+        "file": "glasses/browline-rose.svg",
+        "shape": "browline",
+        "frameColor": "rose"
+      },
+      {
+        "id": "browline-blue",
+        "label": "Browline \u00b7 Blue",
+        "file": "glasses/browline-blue.svg",
+        "shape": "browline",
+        "frameColor": "blue"
+      },
+      {
+        "id": "browline-teal",
+        "label": "Browline \u00b7 Teal",
+        "file": "glasses/browline-teal.svg",
+        "shape": "browline",
+        "frameColor": "teal"
+      },
+      {
+        "id": "browline-purple",
+        "label": "Browline \u00b7 Purple",
+        "file": "glasses/browline-purple.svg",
+        "shape": "browline",
+        "frameColor": "purple"
       }
     ],
     "eyelashes": [

@@ -68,3 +68,9 @@ The generator uses the Python standard library only. PNG contact-sheet rendering
 ## Verification
 
 All 29 SVG layers were parsed as XML and checked for the shared canvas. All manifest IDs and file references were checked, and all 6,048 option combinations were structurally composed and parsed. The contact sheet was rendered and visually reviewed for placement, occlusion, and the no-accessories state. Browser automation could not launch in the current environment, so interactive controls, download behavior, and cross-browser rendering have not been runtime-verified.
+
+Profile portrait update, November 7, 2026: square glasses now use black frames (`#222222`). The application keeps all artwork layers aligned and crops their shared canvas to `[48, 24, 416, 416]` inside the circular avatar; the background still fills the circle. This closer framing includes the full head and bandana with upper body below. Source assets retain their original 512 × 512 alignment for the standalone preview and other artwork uses.
+
+Additional portrait zoom, November 7: enlarged the foreground another 10% about the existing portrait center (256, 232). The resulting shared viewport is approximately `[66.9091,42.9091,378.1818,378.1818]`. Background and glasses color are unchanged.
+
+Eyewear expansion, November 7, 2026: added rounded/wayfarer (inspired by the supplied rounded tortoiseshell reference), aviator and browline shapes. All eight shapes offer black, tortoiseshell, brown, gold, rose, blue, teal and purple, plus their original color. Existing option IDs/artwork remain compatible. The application exposes separate shape/color selectors while storing the same single glasses ID. There are now 96 SVG layers and 73,584 combinations, extending the historical counts above. Tortoiseshell uses an amber/brown/dark SVG pattern with transparent lenses. The contact sheet includes the reference-inspired option; the standalone preview lists complete shape/color combinations.
