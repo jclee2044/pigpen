@@ -4,13 +4,18 @@ import { ApiError,request,execute,operation } from '../api/client'
 import { emptyRecords,type Snapshot,type Resources,type ChangePage,type RuntimeInfo } from '../api/models'
 import { readMeta,writeMeta,pending as readPending,savePending,removePending,commitCache,type CachedSnapshot,type Pending } from '../lib/storage'
 import { applyPage } from '../lib/sync'
+import { orderCategories } from '../lib/categoryOrder'
+import type { Category } from '../api/models'
 
 export class PendingSubmissionError extends Error { constructor(public submissionId:string,text:string){super(text);this.name='PendingSubmissionError'} }
 export const state=reactive({records:emptyRecords(),selectedId:'',deviceId:'',booted:false,hasCache:false,online:navigator.onLine,busy:false,syncing:false,pending:[] as Pending[],lastSync:'',error:'',notice:'',environment:null as RuntimeInfo['environment']|null})
 export const activeUser=computed(()=>state.records.users.find(x=>x.id===state.selectedId&&x.active&&!x.deleted))
 export const household=computed(()=>state.records.household[0])
 export const offlineKinds=new Set<Kind>(['purchase.create','request.create','vote.set'])
-export const rows=<K extends keyof Resources>(key:K):Resources[K][]=>state.records[key].filter(x=>!x.deleted) as Resources[K][]
+export const rows=<K extends keyof Resources>(key:K):Resources[K][]=>{
+ const result=state.records[key].filter(x=>!x.deleted) as Resources[K][]
+ return key==='categories'?orderCategories(result as Category[],household.value?.category_order) as Resources[K][]:result
+}
 let runtimeLoading=false
 function identifyServer(){
  if(state.environment||runtimeLoading)return
@@ -47,6 +52,11 @@ export async function selectProfile(id:string){
  if(epoch!==selectionEpoch)return
  state.selectedId=id
  if(state.online)await bindCurrentProfile()
+}
+export async function clearProfile(){
+ ++selectionEpoch
+ await writeMeta('selected-profile','')
+ state.selectedId=''
 }
 async function bindCurrentProfile(){
  const bind=async()=>{
@@ -141,11 +151,13 @@ export function synchronize():Promise<void>{
  inFlight=(navigator.locks?navigator.locks.request('pigpen-sync',run):run()).finally(()=>{inFlight=undefined})
  return inFlight
 }
-export function startSynchronization(){
+export function startSynchronization(onForeground:()=>Promise<void>=synchronize){
  const online=()=>{state.online=true;void synchronize()}
  const offline=()=>{state.online=false}
- const foreground=()=>{if(document.visibilityState==='visible')void synchronize()}
+ const foreground=()=>{if(document.visibilityState==='visible')void onForeground()}
  window.addEventListener('online',online);window.addEventListener('offline',offline);window.addEventListener('focus',foreground);document.addEventListener('visibilitychange',foreground)
- const timer=setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine)void synchronize()},20000)
- return ()=>{clearInterval(timer);window.removeEventListener('online',online);window.removeEventListener('offline',offline);window.removeEventListener('focus',foreground);document.removeEventListener('visibilitychange',foreground)}
+ const push=(event:MessageEvent)=>{if(event.data?.type==='PIGPEN_NOTIFICATION'&&document.visibilityState==='visible')void synchronize()}
+ navigator.serviceWorker?.addEventListener('message',push)
+ const timer=setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine)void synchronize()},60000)
+ return ()=>{navigator.serviceWorker?.removeEventListener('message',push);clearInterval(timer);window.removeEventListener('online',online);window.removeEventListener('offline',offline);window.removeEventListener('focus',foreground);document.removeEventListener('visibilitychange',foreground)}
 }

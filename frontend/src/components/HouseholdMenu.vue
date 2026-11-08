@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { nextTick,onMounted,onUnmounted,ref,watch } from 'vue'
+import { computed,nextTick,onMounted,onUnmounted,ref,watch } from 'vue'
 import { RouterLink,useRoute } from 'vue-router'
 import type { User } from '../api/models'
+import { state,activeUser } from '../state/household'
 import AppIcon from './AppIcon.vue'
 import PigAvatar from './PigAvatar.vue'
 
 defineProps<{profile?:User;householdName?:string}>()
+const unread=computed(()=>state.records.notifications.filter(n=>!n.deleted&&!n.read_at&&n.recipient_id===activeUser.value?.id).length)
 const route=useRoute()
 const open=ref(false)
 const container=ref<HTMLElement>()
@@ -40,7 +42,9 @@ onUnmounted(()=>document.removeEventListener('pointerdown',outside))
    <AppIcon name="arrow" class="household-chevron" />
   </button>
   <nav v-if="open" id="household-navigation" ref="panel" class="household-dropdown" aria-label="Household settings">
-   <RouterLink to="/profiles" @click="close()"><AppIcon name="settings" /><span>Profiles &amp; settings</span></RouterLink>
+   <RouterLink to="/profiles" @click="close()"><AppIcon name="profiles" /><span>Profiles</span></RouterLink>
+   <RouterLink to="/notifications" @click="close()"><AppIcon name="bell" /><span>Notifications</span><span v-if="unread" class="notification-count" :aria-label="unread+' unread notifications'">{{unread>99?'99+':unread}}</span></RouterLink>
+   <RouterLink to="/settings" @click="close()"><AppIcon name="settings" /><span>Settings</span></RouterLink>
   </nav>
  </div>
 </template>
