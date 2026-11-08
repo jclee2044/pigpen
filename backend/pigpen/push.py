@@ -12,6 +12,31 @@ from .errors import DomainError
 PUSH_HOSTS=('fcm.googleapis.com','updates.push.services.mozilla.com','web.push.apple.com')
 
 
+def vapid_signer(settings):
+    """Validate contact URIs without py-vapid's port/path-rejecting regex."""
+    from pathlib import Path
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from py_vapid import Vapid
+    subject=settings.vapid_subject or ''
+    try:
+        uri=urlparse(subject)
+        valid_https=(uri.scheme=='https' and bool(uri.hostname) and not uri.username
+                     and not uri.password and not uri.fragment and uri.port != 0)
+        valid_mailto=(uri.scheme=='mailto' and not uri.netloc and not uri.fragment
+                      and '@' in uri.path and all(uri.path.rsplit('@',1)))
+        if any(char.isspace() or ord(char)<32 for char in subject) or not (valid_https or valid_mailto):
+            raise ValueError('Invalid VAPID contact URI')
+        key=serialization.load_pem_private_key(Path(settings.vapid_private_key).read_bytes(),password=None)
+        if not isinstance(key,ec.EllipticCurvePrivateKey) or not isinstance(key.curve,ec.SECP256R1):
+            raise ValueError('Invalid VAPID key')
+    except (OSError,ValueError,TypeError):
+        raise DomainError('push_unavailable','Push configuration is unavailable',503) from None
+    # RFC 8292 permits HTTPS contact URIs, including ports and paths. Only
+    # replace the library's subject regex; its audience/signature checks remain.
+    return Vapid(private_key=key,conf={'no-strict':True})
+
+
 def generate_vapid_key(destination):
     """Explicit operator action; create a new private key, never overwrite one."""
     import os
@@ -37,6 +62,7 @@ def push_config(settings):
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ec
     try:
+        vapid_signer(settings)
         key = serialization.load_pem_private_key(Path(settings.vapid_private_key).read_bytes(), password=None)
         if not isinstance(key, ec.EllipticCurvePrivateKey) or not isinstance(key.curve, ec.SECP256R1):
             raise ValueError('Invalid curve')
@@ -105,8 +131,8 @@ def send_webpush(settings,subscription,payload):
         with NoRedirectSession() as session:
             response=webpush(subscription_info={'endpoint':subscription['endpoint'],
                 'keys':{'p256dh':subscription['p256dh'],'auth':subscription['auth']}},data=json.dumps(payload),
-                vapid_private_key=settings.vapid_private_key,vapid_claims={'sub':settings.vapid_subject},
-                timeout=10,requests_session=session)
+                vapid_private_key=vapid_signer(settings),vapid_claims={'sub':settings.vapid_subject},
+                ttl=86400,timeout=10,requests_session=session)
             return response.status_code
     except WebPushException as exc:
         return exc.response.status_code if exc.response is not None else 503
