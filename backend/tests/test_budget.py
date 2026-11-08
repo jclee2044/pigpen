@@ -72,3 +72,30 @@ def test_edit_plan_retains_archived_allocation_without_allowing_new_inactive_mon
     data['allocations'][0]['amount_minor']=6000
     assert client.post('/api/v1/operations',json=operation('budget.set',data,actor,budget['id'])).status_code==422
     assert client.post('/api/v1/operations',json=operation('budget.set',dict(month='2026-12',allocations=data['allocations']),actor)).status_code==422
+
+
+def test_unsaved_month_inherits_latest_plan_without_copy_or_writes(client, users):
+    actor=users[0]['id']; category=food(client)
+    plan=submit(client,'budget.set',dict(month='2026-01',expected_income_minor=100000,
+        allocations=[dict(category_id=category['id'],amount_minor=20000)]),actor)
+    submit(client,'purchase.create',dict(item='January food',amount_minor=1000,
+        category_id=category['id'],transaction_date='2026-01-02'),actor)
+    later=client.get('/api/v1/budget-months/2026-04').json()
+    assert later['budget'] is None
+    assert later['allocated_minor']==20000 and later['spent_minor']==0
+    assert later['planned_unallocated_minor']==80000
+    assert client.get('/api/v1/budget-months/2025-12').json()['allocated_minor']==0
+    override=submit(client,'budget.set',dict(month='2026-04',expected_income_minor=120000,allocations=[]),actor)
+    assert client.get('/api/v1/budget-months/2026-05').json()['allocated_minor']==0
+    assert client.get('/api/v1/budget-months/2026-05').json()['planned_unallocated_minor']==120000
+    assert client.get('/api/v1/budget-months/2026-03').json()['allocated_minor']==20000
+    assert client.get('/api/v1/budget-months/2026-01').json()['budget']['id']==plan['id']
+    assert client.get('/api/v1/budget-months/2026-04').json()['budget']['id']==override['id']
+
+
+def test_inherited_allocations_exclude_archived_categories(client, users):
+    actor=users[0]['id']; category=food(client)
+    submit(client,'budget.set',dict(month='2026-01',allocations=[dict(category_id=category['id'],amount_minor=20000)]),actor)
+    submit(client,'category.update',dict(name=category['name'],active=False,expected_revision=category['revision']),actor,category['id'])
+    assert client.get('/api/v1/budget-months/2026-03').json()['allocated_minor']==0
+    assert client.get('/api/v1/budget-months/2026-01').json()['allocated_minor']==20000

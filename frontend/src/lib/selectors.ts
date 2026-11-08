@@ -1,7 +1,8 @@
 import type { Records,Request,Purchase } from '../api/models'
 export function summary(records:Records,month:string){
  const budget=records['budget-months'].find(x=>x.month===month&&!x.deleted)
- const allocations=records.allocations.filter(x=>!x.deleted&&x.budget_month_id===budget?.id)
+ const plan=budget??records['budget-months'].filter(x=>!x.deleted&&x.month<month).sort((a,b)=>b.month.localeCompare(a.month))[0]
+ const allocations=records.allocations.filter(x=>!x.deleted&&x.budget_month_id===plan?.id&&(!!budget||records.categories.some(c=>c.id===x.category_id&&c.active&&!c.deleted)))
  const purchases=records.purchases.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)===month)
  const categories=records.categories.filter(x=>!x.deleted)
  const savings=records.savings.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)===month&&x.kind!=='opening')
@@ -12,7 +13,7 @@ export function summary(records:Records,month:string){
   return {...category,allocated,actual,remaining:allocated-actual}
  })
  const allocated=rows.reduce((n,x)=>n+x.allocated,0),spent=purchases.reduce((n,x)=>n+x.amount_minor,0)
- return {budget,rows,allocated,spent,remaining:rows.reduce((n,x)=>n+x.remaining,0),expected:budget?.expected_income_minor??0,
+ return {budget,rows,allocated,spent,remaining:rows.reduce((n,x)=>n+x.remaining,0),expected:plan?.expected_income_minor??0,
   actualIncome:records.income.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)===month).reduce((n,x)=>n+x.amount_minor,0),
   savingsBalance:records.savings.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)<=month).reduce((n,x)=>n+(x.kind==='withdrawal'?-x.amount_minor:x.amount_minor),0),netSavings}
 }

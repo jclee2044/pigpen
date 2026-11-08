@@ -3,20 +3,29 @@ from sqlalchemy import select
 from . import schema as s
 from .records import get, expect
 from .errors import DomainError
-from .domain import budget_summary, month_bounds, previous_month
+from .domain import budget_summary, month_bounds
 
 
 class BudgetServices:
+    def prior_plan(self, c, month):
+        return c.execute(select(s.budget_months).where(
+            s.budget_months.c.month < month, s.budget_months.c.deleted==False
+        ).order_by(s.budget_months.c.month.desc()).limit(1)).mappings().first()
+
     def summary(self, c, month):
         month_bounds(month)
         budget = c.execute(select(s.budget_months).where(s.budget_months.c.month==month)).mappings().first()
-        allocations = list(c.execute(select(s.allocations).where(s.allocations.c.budget_month_id==budget['id'])).mappings()) if budget else []
+        plan = budget if budget else self.prior_plan(c, month)
+        allocations = list(c.execute(select(s.allocations).where(s.allocations.c.budget_month_id==plan['id'])).mappings()) if plan else []
+        if not budget:
+            active = set(c.execute(select(s.categories.c.id).where(s.categories.c.active==True, s.categories.c.deleted==False)).scalars())
+            allocations = [a for a in allocations if a['category_id'] in active]
         def rows(table):
             return list(c.execute(select(table)).mappings())
         result = budget_summary(month, rows(s.categories), allocations, rows(s.purchases),
                                 rows(s.income_entries),
                                 rows(s.savings_entries),
-                                budget['expected_income_minor'] if budget else 0)
+                                plan['expected_income_minor'] if plan else 0)
         result['budget'] = dict(budget) if budget else None
         return result
 
@@ -33,8 +42,10 @@ class BudgetServices:
         new_allocations=data['allocations']
         existing_allocations={r['category_id']:dict(r) for r in c.execute(select(s.allocations).where(
             s.allocations.c.budget_month_id==budget['id'],s.allocations.c.deleted==False)).mappings()} if budget else {}
+        if new_allocations is None and budget:
+            new_allocations=[{'category_id':a['category_id'],'amount_minor':a['amount_minor']} for a in existing_allocations.values()]
         if new_allocations is None and not budget:
-            prior=c.execute(select(s.budget_months).where(s.budget_months.c.month==previous_month(month))).mappings().first()
+            prior=self.prior_plan(c, month)
             new_allocations=[]
             if prior:
                 for row in c.execute(select(s.allocations).where(s.allocations.c.budget_month_id==prior['id'],s.allocations.c.deleted==False)).mappings():
