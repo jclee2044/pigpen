@@ -1,0 +1,35 @@
+import {test,expect} from '@playwright/test'
+import {seed,command} from './helpers'
+
+test('budget close warns about unsaved percentages and supports keeping, discarding and saving',async({page,request})=>{
+ const actor=await seed(page,request,'Unsaved budget editor')
+ const snapshot=await(await request.get('/api/v1/sync/snapshot')).json()
+ const category=snapshot.records.categories.find((c:{kind:string})=>c.kind==='savings')
+ await command(request,'budget.set',{month:'2024-06',expected_income_minor:100000,allocations:[{category_id:category.id,amount_minor:69000}]},actor.id)
+ await page.goto('/budget')
+ await page.getByLabel('Budget month',{exact:true}).fill('2024-06')
+ const edit=page.getByRole('button',{name:'Edit',exact:true})
+ const percent=page.getByRole('tab',{name:'Percentages (%)',exact:true})
+ const amount=page.getByLabel(category.name,{exact:true})
+ const close=page.getByRole('button',{name:'Close dialog',exact:true})
+ await edit.click();await percent.click();await close.click()
+ await expect(page.getByRole('dialog')).toHaveCount(0) // Tab changes alone are not edits.
+ await edit.click();await percent.click();await amount.fill('70');await close.click()
+ await expect(page.getByRole('dialog',{name:'Close without saving?',exact:true})).toBeVisible()
+ await page.getByRole('button',{name:'Keep editing',exact:true}).click()
+ await expect(amount).toHaveValue('70.00')
+ await page.keyboard.press('Escape')
+ await page.getByRole('button',{name:'Close without saving',exact:true}).click()
+ await edit.click();await percent.click();await expect(amount).toHaveValue('69.00')
+ await amount.fill('70');await page.keyboard.press('Escape')
+ await page.getByRole('button',{name:'Save budget',exact:true}).click()
+ await expect(page.getByRole('dialog')).toHaveCount(0)
+ await page.reload();await edit.click();await percent.click();await expect(amount).toHaveValue('70.00')
+ await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0)
+ // Backdrop close also protects income edits; cancelling the prompt keeps the draft.
+ await edit.click();await page.getByLabel('Expected income ($)',{exact:true}).fill('2000')
+ await page.getByRole('dialog',{name:'Edit budget',exact:true}).click({position:{x:2,y:2}})
+ await expect(page.getByRole('dialog',{name:'Close without saving?',exact:true})).toBeVisible()
+ await page.keyboard.press('Escape')
+ await expect(page.getByLabel('Expected income ($)',{exact:true})).toHaveValue('2,000.00')
+})

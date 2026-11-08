@@ -30,6 +30,8 @@ test('budget editing formats currency, manages categories and charts allocations
  const budget=await (await request.get('/api/v1/budget-months/2025-04')).json()
  expect(budget.allocated_minor).toBe(4000000123400)
  await page.getByRole('button',{name:'Edit',exact:true}).click()
+ await page.getByLabel('Added from budget allocation',{exact:true}).focus()
+ await page.keyboard.press('ArrowLeft')
  await page.getByRole('button',{name:'Delete Added from budget category',exact:true}).click()
  await page.getByRole('button',{name:'Delete category',exact:true}).click()
  await expect(page.getByLabel('Added from budget · Archived',{exact:true})).toBeDisabled()
@@ -40,6 +42,13 @@ test('budget editing formats currency, manages categories and charts allocations
   await expect.poll(()=>page.locator('.metrics .fit-money').evaluateAll(elements=>elements.every(box=>{
    const text=box.firstElementChild!;return text.getBoundingClientRect().width<=box.clientWidth+1&&getComputedStyle(text).whiteSpace==='nowrap'
   }))).toBe(true)
+  await expect.poll(()=>page.locator('.budget-table').evaluate(box=>{
+   if(box.scrollWidth>box.clientWidth+1)return false
+   return [...box.querySelectorAll<HTMLElement>('.table-number,th span')].every(text=>{
+    const cell=text.parentElement!,style=getComputedStyle(cell)
+    return text.getBoundingClientRect().width<=cell.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)+1
+   })
+  })).toBe(true)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
   await page.screenshot({path:info.outputPath(`budget-${width}.png`),fullPage:true})
  }
@@ -259,4 +268,50 @@ test('Personal stays last in budget lists and category dropdowns despite an olde
  await page.reload()
  await page.getByRole('button',{name:'New purchase',exact:true}).click()
  await expectPersonalLast(await page.getByRole('dialog').getByLabel('Category',{exact:true}).locator('option').evaluateAll(options=>options.map(o=>(o as HTMLOptionElement).value).filter(Boolean)))
+})
+
+test('budget category swipe reveals delete and requires confirmation without losing draft amounts',async({page,request},info)=>{
+ const actor=await seed(page,request,'Swipe budget editor')
+ const category=await command(request,'category.create',{name:'Swipe groceries',kind:'expense'},actor.id)
+ await page.setViewportSize({width:390,height:844})
+ await page.goto('/budget')
+ await page.getByRole('button',{name:'Edit',exact:true}).click()
+ const amount=page.getByLabel(category.name,{exact:true})
+ await amount.fill('123.45');await amount.blur()
+ const row=page.getByLabel(category.name+' allocation',{exact:true})
+ const remove=page.getByRole('button',{name:'Delete '+category.name+' category',exact:true})
+ await expect(remove).toBeHidden()
+ await expect(page.locator('.delete-category')).toHaveCount(0)
+ await row.scrollIntoViewIfNeeded()
+ const session=await page.context().newCDPSession(page)
+ await session.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1})
+ const box=(await row.boundingBox())!,x=box.x+box.width-10,y=box.y+box.height/2
+ await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]})
+ for(let step=1;step<=8;step++)await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-step*12,y}]})
+ await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+ await expect(remove).toBeVisible()
+ await expect(page.getByRole('dialog')).toHaveAccessibleName('Edit budget')
+ await page.screenshot({path:info.outputPath('swipe-delete.png')})
+ await remove.click()
+ await expect(page.getByRole('dialog')).toHaveAccessibleName('Delete category')
+ await expect(page.getByText(/Past purchases and saved budgets keep their history/)).toBeVisible()
+ await page.getByRole('button',{name:'Cancel',exact:true}).click()
+ await expect(amount).toHaveValue('123.45')
+ let snapshot=await(await request.get('/api/v1/sync/snapshot')).json()
+ expect(snapshot.records.categories.find((c:{id:string})=>c.id===category.id).active).toBe(true)
+ // Keyboard reveal also works while the input keeps its normal cursor keys.
+ await amount.focus();await page.keyboard.press('ArrowLeft');await expect(remove).toBeHidden()
+ await row.focus();await page.keyboard.press('ArrowLeft');await expect(remove).toBeVisible()
+ await remove.click();await page.getByRole('button',{name:'Delete category',exact:true}).click()
+ await expect(page.getByRole('dialog')).toHaveAccessibleName('Edit budget')
+ await expect(amount).toHaveCount(0)
+ snapshot=await(await request.get('/api/v1/sync/snapshot')).json()
+ expect(snapshot.records.categories.find((c:{id:string})=>c.id===category.id).active).toBe(false)
+ const personal=page.locator('.sortable-category').filter({hasText:'Personal'})
+ await expect(personal.locator('.wish-delete')).toHaveCount(0)
+ for(const width of [320,390,1440]){
+  await page.setViewportSize({width,height:844})
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+ }
+ await session.detach()
 })

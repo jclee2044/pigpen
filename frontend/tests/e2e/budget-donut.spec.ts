@@ -31,6 +31,13 @@ test('budget wheel selects by tap, drag, touch and keyboard with income percenta
  await expect(callout).toHaveAccessibleName(/Wheel food, \$250\.00, 25\.0% of expected income/)
  await expect(food).toHaveAttribute('aria-selected','true')
  await expect(keyFood).toHaveAttribute('aria-pressed','true')
+ await keyFood.hover()
+ await key.getByRole('button',{name:'Wheel housing',exact:true}).focus()
+ await page.keyboard.press('Enter')
+ await expect(keyFood).toHaveCSS('background-color','rgba(0, 0, 0, 0)')
+ await expect(food).toHaveAttribute('stroke-width','17')
+ await expect(housing).toHaveAttribute('stroke-width','20')
+ await keyFood.click()
  await expect(page.locator('.donut-center .donut-callout')).toBeVisible()
  await expect(page.locator('.donut-center')).not.toContainText('Expected income')
  await key.getByRole('button',{name:'Housing',exact:true}).click()
@@ -71,7 +78,11 @@ test('budget wheel selects by tap, drag, touch and keyboard with income percenta
   const size=(await wheel.boundingBox())!.width
   expect(size).toBeCloseTo(width===320?187.5:width===390?240:300,0)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+  const gutters=await key.evaluate(el=>{const key=el.getBoundingClientRect(),card=el.closest('.budget-chart')!.getBoundingClientRect();return {left:key.left-card.left,right:card.right-key.right}})
+  expect(gutters.left).toBeGreaterThanOrEqual(40)
+  expect(gutters.right).toBeCloseTo(gutters.left,0)
   const boxes=await page.locator('.budget-legend li').evaluateAll(elements=>elements.map(el=>{const box=el.getBoundingClientRect();return {x:Math.round(box.left),y:Math.round(box.top)}}))
+  expect(new Set(boxes.map(box=>box.x)).size).toBe(2)
   for(let i=1;i<boxes.length;i++){
    const previous=boxes[i-1]!,current=boxes[i]!
    expect(current.x>previous.x||(current.x===previous.x&&current.y>previous.y)).toBe(true)
@@ -98,7 +109,31 @@ test('budget wheel selects by tap, drag, touch and keyboard with income percenta
  await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
  await expect(callout).toContainText('Wheel food')
  await expect(food).toHaveAttribute('aria-selected','true')
+ const keyHousing=key.getByRole('button',{name:'Wheel housing',exact:true})
+ const endBox=(await keyHousing.boundingBox())!
+ const keyEnd={x:endBox.x+endBox.width/2,y:endBox.y+endBox.height/2}
+ const scrollBefore=await page.evaluate(()=>scrollY)
+ await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[keyPoint]})
+ await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[keyEnd]})
+ await expect(callout).toContainText('Wheel housing')
+ await expect(housing).toHaveAttribute('aria-selected','true')
+ await expect(keyHousing).toHaveAttribute('aria-pressed','true')
+ await expect(page.locator('.refresh-host')).not.toHaveClass(/dragging|refreshing/)
+ await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+ await expect(callout).toContainText('Wheel housing')
+ expect(await page.evaluate(()=>scrollY)).toBe(scrollBefore)
+ await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[keyEnd]})
+ await session.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]})
  await session.detach()
+ await keyFood.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}))
+ const mouseFood=(await keyFood.boundingBox())!,mouseHousing=(await keyHousing.boundingBox())!
+ const mouseStart={x:mouseHousing.x+mouseHousing.width/2,y:mouseHousing.y+mouseHousing.height/2}
+ const mouseEnd={x:mouseFood.x+mouseFood.width/2,y:mouseFood.y+mouseFood.height/2}
+ await page.mouse.move(mouseStart.x,mouseStart.y);await page.mouse.down();await page.mouse.move(mouseEnd.x,mouseEnd.y,{steps:10})
+ await expect(callout).toContainText('Wheel food');await page.mouse.up()
+ await expect(food).toHaveAttribute('aria-selected','true')
+ await page.mouse.move(mouseStart.x,mouseStart.y)
+ await expect(callout).toContainText('Wheel food')
  await page.screenshot({path:info.outputPath('wheel-selection-phone.png'),fullPage:true})
  await setBudget(50000);await page.reload();await expect(food).toHaveAttribute('stroke-dasharray',/33\.333/);await wheel.focus();await page.keyboard.press('Home')
  await expect(callout).toHaveAccessibleName(/Wheel food, \$250\.00, 50\.0% of expected income/)
@@ -122,5 +157,24 @@ test('budget wheel selects by tap, drag, touch and keyboard with income percenta
   await wheel.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}))
   await page.screenshot({path:info.outputPath(`center-details-${width}.png`),fullPage:true})
  }
+
+ await page.setViewportSize({width:390,height:900})
+ const scrollSession=await page.context().newCDPSession(page)
+ await scrollSession.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1})
+ // Gestures beginning in either clear side margin scroll the document.
+ for(const side of ['left','right'])for(const delta of [-100,100]){
+  await key.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}))
+  const keyBounds=(await key.boundingBox())!,cardBounds=(await page.locator('.budget-chart').boundingBox())!
+  const x=side==='left'?(cardBounds.x+keyBounds.x)/2:(keyBounds.x+keyBounds.width+cardBounds.x+cardBounds.width)/2
+  const y=Math.max(180,Math.min(650,keyBounds.y+keyBounds.height/2))
+  await scrollSession.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]})
+  const before=await page.evaluate(()=>scrollY)
+  for(let step=1;step<=8;step++)await scrollSession.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+delta*step/8}]})
+  if(delta<0)await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(before+30)
+  else await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(before-30)
+  await scrollSession.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+  await expect(page.locator('.refresh-host')).not.toHaveClass(/dragging|refreshing/)
+ }
+ await scrollSession.detach()
 
 })

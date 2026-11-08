@@ -17,7 +17,7 @@ const chartId=useId()
 const selectedId=ref<string|null>(null)
 const wheel=ref<SVGSVGElement>()
 function dismissOutside(event:PointerEvent){
- if(event.isPrimary&&event.button===0&&dragging===undefined&&event.target instanceof Node&&!wheel.value?.contains(event.target)&&!legend.value?.contains(event.target))selectedId.value=null
+ if(event.isPrimary&&event.button===0&&dragging===undefined&&legendDragging===undefined&&event.target instanceof Node&&!wheel.value?.contains(event.target)&&!legend.value?.contains(event.target))selectedId.value=null
 }
 const pointerFocus=ref(false)
 const selected=computed(()=>entries.value.find(entry=>entry.id===selectedId.value))
@@ -60,10 +60,39 @@ function selectWithKeyboard(event:KeyboardEvent){
 }
 watch(()=>JSON.stringify([props.expected,entries.value.map(({id,name,allocated})=>[id,name,allocated])]),()=>{selectedId.value=null})
 const legend=ref<HTMLElement>()
+let legendDragging:number|undefined
+let legendMoved=false
+function selectLegendAt(event:PointerEvent){
+ const box=legend.value?.getBoundingClientRect()
+ if(!box||event.clientY<box.top||event.clientY>box.bottom)return false
+ const buttons=Array.from(legend.value!.querySelectorAll<HTMLButtonElement>('button[data-category-id]'))
+ const column=buttons.map(button=>({button,box:button.getBoundingClientRect()})).filter(({box})=>event.clientX>=box.left&&event.clientX<=box.right)
+ const nearest=column.sort((a,b)=>Math.abs(event.clientY-(a.box.top+a.box.bottom)/2)-Math.abs(event.clientY-(b.box.top+b.box.bottom)/2))[0]
+ if(!nearest)return false
+ selectedId.value=nearest.button.dataset.categoryId!
+ return true
+}
+function startLegendSelection(event:PointerEvent){
+ if(legendDragging!==undefined||dragging!==undefined||!event.isPrimary||event.button!==0)return
+ legendMoved=false
+ if(!selectLegendAt(event))return
+ legendDragging=event.pointerId
+ legend.value!.setPointerCapture(event.pointerId)
+}
+function moveLegendSelection(event:PointerEvent){
+ if(legendDragging!==event.pointerId)return
+ legendMoved=true
+ selectLegendAt(event)
+}
+function endLegendSelection(event:PointerEvent){if(legendDragging===event.pointerId)legendDragging=undefined}
+function clickLegend(event:MouseEvent){
+ // A compatibility click after a drag must not reselect the starting button.
+ if(event.detail>0&&legendMoved){event.preventDefault();event.stopPropagation();legendMoved=false}
+}
 const legendWidth=ref(0)
-// Prefer even rows over filling the first row and leaving one category alone.
+// Keep a balanced pair of columns inside the centered key.
 const legendColumns=computed(()=>{
- const capacity=Math.max(1,Math.min(4,Math.floor((legendWidth.value+24)/164)))
+ const capacity=Math.max(1,Math.min(2,Math.floor((legendWidth.value+12)/100)))
  return Math.ceil(entries.value.length/Math.ceil(entries.value.length/capacity))
 })
 const legendPositions=computed(()=>{
@@ -88,7 +117,7 @@ const overBudget=computed(()=>Math.max(0,props.rows.reduce((n,x)=>n+x.allocated,
 <template>
 <section class="card budget-chart" aria-label="Budget allocation by category">
  <div class="budget-donut"><svg ref="wheel" data-touch-interactive viewBox="0 0 120 120" role="listbox" tabindex="0" :class="{'pointer-focus':pointerFocus}" @blur="pointerFocus=false" aria-label="Budget categories. Tap or drag around the wheel, or use arrow keys to select." :aria-activedescendant="selected&&selected.percent>0?`${chartId}-${selected.id}`:undefined" @pointerdown="startSelection" @pointermove="moveSelection" @pointerup="endSelection" @pointercancel="endSelection" @lostpointercapture="endSelection" @keydown="selectWithKeyboard"><circle aria-hidden="true" cx="60" cy="60" r="46" fill="none" stroke="var(--line)" stroke-width="17"/><circle v-for="entry in segments" :id="`${chartId}-${entry.id}`" :key="entry.id" role="option" :aria-label="description(entry)" :aria-selected="selected?.id===entry.id" :class="{'segment-muted':selected&&selected.percent>0&&selected.id!==entry.id}" cx="60" cy="60" r="46" fill="none" :stroke="entry.color" :stroke-width="selected?.id===entry.id?20:17" pathLength="100" :stroke-dasharray="`${entry.percent} ${100-entry.percent}`" :stroke-dashoffset="-entry.offset" transform="rotate(-90 60 60)" /></svg><div class="donut-center" role="status" aria-live="polite" aria-atomic="true"><div v-if="selected" class="donut-callout" :aria-label="description(selected)"><small class="donut-category" :title="selected.name">{{selected.name}}</small><FitMoney class="donut-total" :amount="selected.allocated" /><small class="donut-share">{{expected>0?`${(selected.allocated/expected*100).toFixed(1)}%`:'No expected income'}}</small></div><template v-else><small>Expected income</small><FitMoney class="donut-total" :amount="expected" /></template></div></div>
- <ul ref="legend" class="budget-legend" @keydown.esc="selectedId=null" :style="{'--legend-columns':legendColumns}"><li v-for="(entry,index) in entries" :key="entry.id" :style="legendPositions[index]"><button type="button" :aria-pressed="selected?.id===entry.id" @click="selectedId=entry.id"><span class="legend-swatch" :style="{background:entry.color}"/><span>{{entry.name}}</span></button></li></ul>
+ <ul ref="legend" data-touch-interactive class="budget-legend" @pointerdown="startLegendSelection" @pointermove="moveLegendSelection" @pointerup="endLegendSelection" @pointercancel="endLegendSelection" @lostpointercapture="endLegendSelection" @click.capture="clickLegend" @keydown.esc="selectedId=null" :style="{'--legend-columns':legendColumns}"><li v-for="(entry,index) in entries" :key="entry.id" :style="legendPositions[index]"><button type="button" :data-category-id="entry.id" :aria-pressed="selected?.id===entry.id" @click="selectedId=entry.id"><span class="legend-swatch" :style="{background:entry.color}"/><span>{{entry.name}}</span></button></li></ul>
  <p v-if="overBudget" class="text-small chart-empty">Budgets exceed expected income by {{money(overBudget)}}. Percentages show shares of total allocations; Uncategorized is 0%.</p>
  <p v-if="!total" class="text-small chart-empty">Set category amounts to see your budget breakdown.</p>
 </section>
@@ -104,10 +133,9 @@ const overBudget=computed(()=>Math.max(0,props.rows.reduce((n,x)=>n+x.allocated,
 .donut-share{font-size:12px;line-height:1.2}
 .donut-center{position:absolute;inset:27%;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px}
 .donut-total{width:100%;font-size:24px;font-weight:400}
-.budget-legend{list-style:none;padding:0;margin:0;width:100%;max-width:880px;display:grid;grid-template-columns:repeat(calc(var(--legend-columns)*2),minmax(0,1fr));gap:14px 12px}
+.budget-legend{touch-action:none;user-select:none;list-style:none;padding:0;margin:0;width:calc(100% - 48px);max-width:520px;display:grid;grid-template-columns:repeat(calc(var(--legend-columns)*2),minmax(0,1fr));gap:14px 12px}
 .budget-legend li{min-width:0}
 .budget-legend button{display:grid;grid-template-columns:10px minmax(0,1fr);gap:8px;align-items:center;width:100%;min-height:0;padding:0;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:13px;text-align:left}
-.budget-legend button:hover{background:var(--hover)}
 .budget-legend button[aria-pressed="true"]{background:var(--selected);color:var(--rose);font-weight:700}
 .budget-legend button>span:nth-child(2){overflow-wrap:anywhere}
 .legend-swatch{width:10px;height:10px;border-radius:50%}
