@@ -6,7 +6,7 @@ test('centered thinking pig and pull refresh wheel respect reduced motion',async
  let gate=new Promise<void>(resolve=>{release=resolve})
  await page.route('**/api/v1/sync/snapshot',async route=>{await gate;await route.continue()})
  await page.goto('/')
- const startup=page.getByRole('status').filter({hasText:'Loading PigPen…'})
+ const startup=page.getByRole('status').filter({hasText:'Loading...'})
  await expect(startup).toBeVisible()
  await expect(startup.locator('img')).toHaveJSProperty('complete',true)
  for(const width of [320,390,1440]){
@@ -27,7 +27,7 @@ test('centered thinking pig and pull refresh wheel respect reduced motion',async
  gate=new Promise<void>(resolve=>{release=resolve})
  await page.route('**/api/v1/operations',async route=>{await gate;await route.continue()})
  await page.getByRole('button',{name:'Save wish',exact:true}).click()
- await expect(page.getByRole('dialog').getByRole('status')).toHaveText('Saving…')
+ await expect(page.getByRole('dialog').getByRole('status')).toHaveText('Loading...')
  await expect(page.getByRole('dialog').locator('.app-loading')).toHaveCSS('align-items','center')
  await page.screenshot({path:info.outputPath('saving.png')})
  release();await expect(page.getByRole('dialog')).toHaveCount(0)

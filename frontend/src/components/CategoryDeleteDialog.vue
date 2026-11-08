@@ -15,7 +15,7 @@ async function remove(){
 </script>
 <template>
  <AppDialog title="Delete category?" @close="close">
-  <AppLoading v-if="saving" compact label="Deleting…" />
+  <AppLoading v-if="saving" compact />
   <p>Delete “{{category.name}}” from available categories? Past purchases and saved budgets keep their history. Future months will skip this category. You can restore it in Manage categories.</p>
   <p v-if="category.allows_subcategories" class="text-small">Its subcategories cannot be used for new entries while this category is archived.</p>
   <div v-if="error" role="alert" class="notice error">{{error}}</div>

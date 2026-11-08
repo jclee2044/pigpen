@@ -42,7 +42,7 @@ async function enable(){
   <p v-else class="text-small">You can change this later in Settings.</p>
   <p v-if="error" class="notice error" role="alert">{{error}}</p>
   <div class="actions">
-   <AppLoading v-if="working" compact label="Enabling notifications…" />
+   <AppLoading v-if="working" compact />
    <button v-if="!needsInstall" class="button primary" :disabled="working||pending||!state.online||!config?.public_key" @click="enable">{{working?'Enabling…':'Enable notifications'}}</button>
    <button class="button" :disabled="working" @click="dismiss">{{needsInstall?'Got it':'Not now'}}</button>
   </div>

@@ -28,7 +28,7 @@ async function unarchive(category:Category){
 <template>
  <CategoryDeleteDialog v-if="deleting" :category="deleting" @close="deleting=undefined" @deleted="deleting=undefined" />
  <CategoryForm v-else-if="editing||adding" :category="editing" :parent-category="parent" @close="editing=undefined;adding=false;parent=undefined" />
- <AppDialog v-else title="Manage categories" @close="emit('close')"><AppLoading v-if="saving" compact label="Saving…" />
+ <AppDialog v-else title="Manage categories" @close="emit('close')"><AppLoading v-if="saving" compact />
   <div class="category-toolbar"><button class="button primary icon-only" aria-label="Add category" title="Add category" :disabled="!state.online" @click="adding=true"><AppIcon name="plus" /></button></div>
   <div v-if="error" role="alert" class="notice error">{{error}}</div>
   <button v-if="retryId&&restoring" class="button" :disabled="saving||!state.online" @click="unarchive(restoring)">Retry unarchive</button>
