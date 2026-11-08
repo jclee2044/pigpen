@@ -22,7 +22,7 @@ async function change(enable:boolean){working.value=true;error.value='';try{if(e
     <span class="push-switch-track" aria-hidden="true"><span class="push-switch-thumb" /></span>
    </button>
   </div>
-  <AppLoading v-if="working||(supported&&!needsInstall&&!loaded&&!error)" compact :label="working?'Updating notifications…':'Loading notification settings…'" />
+  <AppLoading v-if="working||(supported&&!needsInstall&&!loaded&&!error)" compact />
   <p id="push-privacy" class="push-help">Get alerts for approval requests, comments, and household updates. Notifications show who did what and relevant item names. Amounts, prices, balances, and other financial numbers are not included.</p>
   <p v-if="needsInstall" class="push-help">In Safari, tap Share → Add to Home Screen. Open PigPen from that icon to enable notifications.</p>
   <p v-else-if="!supported" class="push-help">This browser does not support push notifications. Your notification inbox is always available.</p>
