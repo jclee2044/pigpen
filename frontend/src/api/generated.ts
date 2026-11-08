@@ -55,6 +55,11 @@ export interface CategoryCreate {
   "parent_id"?: string | null
 }
 
+export interface CategoryReorder {
+  "expected_revision": number
+  "category_ids": Array<string>
+}
+
 export interface CategoryUpdate {
   "expected_revision": number
   "name": string
@@ -227,6 +232,15 @@ export interface category_create {
   "client_time": string
   "kind": "category.create"
   "data": CategoryCreate
+}
+
+export interface category_reorder {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "category.reorder"
+  "data": CategoryReorder
 }
 
 export interface category_update {
@@ -442,6 +456,7 @@ export interface Payloads {
   "user.update": UserUpdate
   "category.create": CategoryCreate
   "category.update": CategoryUpdate
+  "category.reorder": CategoryReorder
   "budget.set": BudgetSet
   "purchase.create": PurchaseCreate
   "purchase.update": PurchaseUpdate

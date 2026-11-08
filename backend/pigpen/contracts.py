@@ -53,8 +53,13 @@ class CategoryUpdate(Model):
     active: StrictBool
 
 
+class CategoryReorder(Model):
+    expected_revision: Revision
+    category_ids: list[UUID] = Field(max_length=500)
+
+
 PAYLOADS = {'household.initialize': HouseholdInit, 'user.create': UserCreate, 'user.update': UserUpdate,
-            'category.create': CategoryCreate, 'category.update': CategoryUpdate}
+            'category.create': CategoryCreate, 'category.update': CategoryUpdate, 'category.reorder': CategoryReorder}
 
 
 class Envelope(Model):

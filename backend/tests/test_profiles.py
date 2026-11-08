@@ -42,3 +42,38 @@ def test_migration_upgrade_preserves_populated_database(settings):
     with Database(settings).transaction() as c:
         assert c.execute(text("SELECT id FROM operations")).scalar()=='keep'
         assert c.execute(select(func.count()).select_from(s.users)).scalar()==0
+
+
+def test_shared_category_order_revisions_validation_and_replay(client, household, users):
+    actor = users[0]['id']
+    categories = client.get('/api/v1/categories').json()['items']
+    ids = [row['id'] for row in categories if not row['parent_id']]
+    op = operation('category.reorder', {'expected_revision': household['revision'],
+        'category_ids': list(reversed(ids))}, actor, household['id'])
+    response = client.post('/api/v1/operations', json=op)
+    assert response.status_code == 200
+    result = response.json()['result']
+    assert result['category_order'] == list(reversed(ids))
+    assert result['revision'] == household['revision'] + 1
+    assert client.post('/api/v1/operations', json=op).json() == response.json()
+    assert client.get('/api/v1/sync/snapshot').json()['records']['household'][0]['category_order'] == result['category_order']
+    stale = operation('category.reorder', op['data'], users[1]['id'], household['id'])
+    assert client.post('/api/v1/operations', json=stale).status_code == 409
+    for invalid in [[ids[0], ids[0]], [str(__import__('uuid').uuid4())]]:
+        bad = operation('category.reorder', {'expected_revision': result['revision'], 'category_ids': invalid}, actor, household['id'])
+        assert client.post('/api/v1/operations', json=bad).status_code == 422
+    # A second household member can move a subset; other saved positions survive.
+    updated = submit(client, 'category.reorder', {'expected_revision': result['revision'], 'category_ids': [ids[0]]}, users[1]['id'], household['id'])
+    assert updated['category_order'] == [ids[0]] + [value for value in result['category_order'] if value != ids[0]]
+
+
+def test_category_order_migration_preserves_existing_household(settings):
+    migrate(settings, '0006')
+    with Database(settings).transaction(write=True) as connection:
+        connection.execute(text("INSERT INTO households (id,singleton,name,currency,timezone,approval_policy,revision,deleted,created_at,updated_at) VALUES ('existing',1,'Existing household','USD','America/New_York','all',4,0,'before','before')"))
+    migrate(settings)
+    with Database(settings).transaction() as connection:
+        row = connection.execute(select(s.households)).mappings().one()
+        assert row['name'] == 'Existing household'
+        assert row['revision'] == 4
+        assert row['category_order'] == []

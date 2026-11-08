@@ -17,6 +17,7 @@ households = Table('households', metadata,
     Column('id', String, primary_key=True), Column('singleton', Integer, nullable=False, unique=True),
     Column('name', String, nullable=False), Column('currency', String, nullable=False),
     Column('timezone', String, nullable=False), Column('approval_policy', String, nullable=False),
+    Column('category_order', JSON, nullable=False, server_default='[]'),
     Column('revision', Integer, nullable=False), Column('deleted', Boolean, nullable=False),
     Column('created_at', String, nullable=False), Column('updated_at', String, nullable=False),
     CheckConstraint('singleton = 1'), CheckConstraint("approval_policy = 'all'"))

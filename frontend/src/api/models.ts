@@ -1,7 +1,7 @@
 import type { Avatar } from './generated'
 export interface RuntimeInfo { environment: 'production'|'development'|'test' }
 export interface Row { id: string; revision: number; deleted: boolean; created_at: string; updated_at: string; household_id: string }
-export interface Household extends Row { name: string; currency: string; timezone: string; approval_policy: 'all' }
+export interface Household extends Row { name: string; currency: string; timezone: string; approval_policy: 'all'; category_order?: string[] }
 export interface User extends Row { name: string; avatar: Required<Avatar>; active: boolean }
 export interface Category extends Row { name: string; kind: 'expense'|'personal'|'savings'; owner_id: string|null; parent_id: string|null; active: boolean }
 export interface Budget extends Row { month: string; expected_income_minor: number }

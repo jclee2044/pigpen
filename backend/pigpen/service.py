@@ -71,7 +71,7 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
         if c.execute(select(s.households.c.id)).first():
             raise DomainError('already_initialized', 'Household already exists', 409)
         timestamp = now()
-        record = dict(id=op['entity_id'], singleton=1, **op['data'], approval_policy='all',
+        record = dict(id=op['entity_id'], singleton=1, **op['data'], approval_policy='all', category_order=[],
                       revision=1, deleted=False, created_at=timestamp, updated_at=timestamp)
         c.execute(insert(s.households).values(**record))
         self.changed(c, s.households, record)
@@ -120,6 +120,19 @@ class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationSer
         elif data['parent_id'] or data['owner_id']:
             raise DomainError('category', 'Only Personal categories have parents or owners')
         return self.save(c, s.categories, dict(id=op['entity_id'], **data, active=True))
+
+    def do_category_reorder(self, c, op):
+        row = self.household(c)
+        if op['entity_id'] != row['id']:
+            raise DomainError('category', 'Category order must target the household')
+        expect(row, op['data']['expected_revision'])
+        ids = op['data']['category_ids']
+        available = set(c.execute(select(s.categories.c.id).where(
+            s.categories.c.deleted.is_(False), s.categories.c.parent_id.is_(None))).scalars())
+        if len(ids) != len(set(ids)) or not set(ids) <= available:
+            raise DomainError('category', 'Order must contain unique top-level categories')
+        order = ids + [value for value in row['category_order'] if value not in ids and value in available]
+        return self.save(c, s.households, {'category_order': order}, row)
 
     def do_category_update(self, c, op):
         row = get(c, s.categories, op['entity_id']); data = dict(op['data']); expect(row, data.pop('expected_revision'))
