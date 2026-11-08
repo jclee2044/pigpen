@@ -9,7 +9,7 @@ test('phone comments remain editable after scrolling and keyboard-sized viewport
  for(const [route,name] of [['/wish-lists','Phone comment wish'],['/approvals','Phone comment request']]){
   await page.goto(route!)
   await page.getByRole('button',{name,exact:true}).click()
-  const dialog=page.getByRole('dialog'),field=page.getByLabel('Comment',{exact:true})
+  const dialog=page.getByRole('dialog'),field=page.getByLabel('Say something...',{exact:true})
   await field.scrollIntoViewIfNeeded()
   await field.click()
   await field.pressSequentially('First line')

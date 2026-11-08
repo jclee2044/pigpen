@@ -210,7 +210,7 @@ class CommentCreate(Model):
 
 PAYLOADS.update({'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,'wishlist.delete':Delete,
                  'request.create':RequestCreate,'request.update':RequestUpdate,'request.cancel':Delete,'request.delete':Delete,'request.deny':RequestDeny,
-                 'vote.set':VoteSet,'comment.create':CommentCreate,'notification.read':Delete})
+                 'vote.set':VoteSet,'comment.create':CommentCreate,'comment.resend':Model,'notification.read':Delete})
 class InstallationSelect(Model):
     expected_revision: Annotated[StrictInt, Field(ge=0)] = 0
 

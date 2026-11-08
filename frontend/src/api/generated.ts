@@ -101,6 +101,8 @@ export interface InstallationSelect {
   "expected_revision"?: number
 }
 
+export type Model = Record<string, never>
+
 export interface PurchaseCreate {
   "item": string
   "amount_minor": number
@@ -266,6 +268,15 @@ export interface comment_create {
   "client_time": string
   "kind": "comment.create"
   "data": CommentCreate
+}
+
+export interface comment_resend {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "comment.resend"
+  "data": Model
 }
 
 export interface household_initialize {
@@ -513,6 +524,7 @@ export interface Payloads {
   "request.deny": RequestDeny
   "vote.set": VoteSet
   "comment.create": CommentCreate
+  "comment.resend": Model
   "notification.read": Delete
   "installation.select": InstallationSelect
   "subscription.set": SubscriptionSet

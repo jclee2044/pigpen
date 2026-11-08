@@ -24,11 +24,12 @@ def notification_message(c,op,kind,resource,target):
         'purchase.created':f'{actor} added a purchase: {item}',
         'request.created':f'{actor} submitted {item} for approval',
         'request.revised':f'{actor} updated the approval request for {item}',
-        'request.denied':f'{actor} denied the approval request for {item}',
         'request.canceled':f'{actor} canceled the approval request for {item}',
+        'request.denied':f'{actor} denied the approval request for {item}',
         'approval.on':f'{actor} approved {item}',
         'approval.off':f'{actor} removed approval for {item}',
-        'comment.created':f'{actor} commented on {item}',
+        'comment.created':(f'{actor} nudged you about a comment about the {label or "item"}'
+                           if op['kind']=='comment.resend' else f'{actor} commented on {item}'),
         'budget.reached':f'{actor} recorded spending that reached the {label or "category"} budget',
         'budget.exceeded':f'{actor} recorded spending that exceeded the {label or "category"} budget',
     }

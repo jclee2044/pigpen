@@ -129,3 +129,11 @@ class ApprovalServices:
         result=self.save(c,s.comments,dict(id=op['entity_id'],actor_id=op['actor_id'],**data))
         self.notify(c,op,'comment.created',data['target_resource'],data['target_id'])
         return result
+
+    def do_comment_resend(self,c,op):
+        row=get(c,s.comments,op['entity_id'])
+        if row['actor_id']!=op['actor_id']:
+            raise DomainError('actor','Only the author can resend a comment notification',403)
+        get(c,s.RESOURCES[row['target_resource']],row['target_id'])
+        self.notify(c,op,'comment.created',row['target_resource'],row['target_id'])
+        return row
