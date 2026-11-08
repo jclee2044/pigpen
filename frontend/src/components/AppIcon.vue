@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{ name: string }>()
 const paths: Record<string,string> = {
+ comments:'M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5a9.5 9.5 0 0 1 19 0ZM7 9h10M7 13h7',
  profiles:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
  home:'M3 10 12 3l9 7v11h-6v-7H9v7H3Z', receipt:'M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6M9 12h6',
  budget:'M3 5h18v16H3ZM3 10h18M8 2v6M16 2v6M8 15h8M12 12v6', heart:'M20.8 4.6c-2.4-2.2-6-1.5-8.8 1.4C9.2 3.1 5.6 2.4 3.2 4.6-2 9.5 5.9 17 12 21c6.1-4 14-11.5 8.8-16.4Z',

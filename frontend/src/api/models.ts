@@ -12,7 +12,7 @@ export interface Savings extends Income { kind: 'opening'|'contribution'|'withdr
 export interface Bill extends Row { name: string; amount_minor: number; category_id: string; due_day: number; start_date: string; description: string; active: boolean }
 export interface Occurrence { id: string; bill_id: string; name: string; due_date: string; expected_minor: number; purchase_id: string|null }
 export interface Wish extends Row { owner_id: string; name: string; price_minor: number; description: string; url: string|null; status: 'active'|'purchased'|'archived' }
-export interface Request extends Row { requester_id: string; item: string; amount_minor: number; description: string; url: string|null; category_id: string|null; status: 'open'|'canceled'|'purchased'; purchase_id: string|null; approved_revision: number|null }
+export interface Request extends Row { requester_id: string; item: string; amount_minor: number; description: string; url: string|null; category_id: string|null; status: 'open'|'canceled'|'purchased'|'denied'; purchase_id: string|null; approved_revision: number|null }
 export interface Vote extends Row { request_id: string; reviewer_id: string; approved: boolean; request_revision: number }
 export interface Comment extends Row { actor_id: string; target_resource: 'wishlist-items'|'approval-requests'; target_id: string; text: string }
 export interface Note extends Row { recipient_id: string; kind: string; target_resource: string; target_id: string; read_at: string|null; message?: string }

@@ -24,7 +24,8 @@ export function approved(request:Request,records:Records){
  const reviewers=records.users.filter(x=>x.active&&!x.deleted&&x.id!==request.requester_id)
  return reviewers.length>0&&reviewers.every(user=>records['approval-votes'].some(v=>!v.deleted&&v.request_id===request.id&&v.reviewer_id===user.id&&v.approved&&v.request_revision===request.revision))
 }
-export const recent=(purchases:Purchase[])=>[...purchases].sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||b.created_at.localeCompare(a.created_at))
+export const newest=<T extends {id:string;created_at:string}>(items:T[])=>[...items].sort((a,b)=>b.created_at.localeCompare(a.created_at)||b.id.localeCompare(a.id))
+export const recent=(purchases:Purchase[])=>[...purchases].sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||b.created_at.localeCompare(a.created_at)||b.id.localeCompare(a.id))
 export function occurrences(records:Records,month:string){
  const year=Number(month.slice(0,4)),number=Number(month.slice(5,7)),lastDay=new Date(Date.UTC(year,number,0)).getUTCDate()
  return records['recurring-bills'].filter(b=>!b.deleted).flatMap(b=>{

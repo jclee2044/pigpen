@@ -35,6 +35,9 @@ function click(event:MouseEvent){
  if(suppressClick){event.preventDefault();event.stopPropagation();suppressClick=false;return}
  if(props.open){event.preventDefault();event.stopPropagation();emit('reveal','')}
 }
+function revealWithKeyboard(event:KeyboardEvent){
+ if(props.enabled&&!(event.target as HTMLElement).closest('input,textarea,select,[contenteditable]')){event.preventDefault();emit('reveal',props.id)}
+}
 function remove(){emit('reveal','');emit('delete')}
 function startDelete(event:TouchEvent){const touch=event.touches.length===1?event.touches[0]:undefined;deleteTouch=touch?{x:touch.clientX,y:touch.clientY}:undefined}
 function tapDelete(event:TouchEvent){
@@ -46,14 +49,14 @@ function tapDelete(event:TouchEvent){
 <template>
  <div class="wish-swipe" :class="{revealed:open,dragging,enabled}">
   <button v-if="enabled" type="button" class="wish-delete" :tabindex="open?0:-1" :aria-hidden="!open" :aria-label="'Delete '+name" @touchstart.passive="startDelete" @touchend.prevent="tapDelete" @touchcancel="deleteTouch=undefined" @click="remove">Delete</button>
-  <div class="wish-surface" :style="{transform:`translateX(${dragging?offset:open?-88:0}px)`}" @pointerdown="start" @pointermove="move" @pointerup="end" @pointercancel="cancel" @lostpointercapture.self="cancel" @click.capture="click" @keydown.esc="emit('reveal','')"><slot /></div>
+  <div class="wish-surface" :style="{transform:`translateX(${dragging?offset:open?-88:0}px)`}" @pointerdown="start" @pointermove="move" @pointerup="end" @pointercancel="cancel" @lostpointercapture.self="cancel" @click.capture="click" @keydown.esc="emit('reveal','')" @keydown.left="revealWithKeyboard"><slot /></div>
  </div>
 </template>
 <style scoped>
 .wish-swipe{--wish-radius:var(--radius);position:relative;display:grid;min-width:0;border-radius:var(--wish-radius);overflow:hidden}
 .wish-swipe.enabled{touch-action:pan-y pinch-zoom}
 .wish-surface{position:relative;display:grid;min-width:0;transition:transform .18s ease}
-.wish-surface :deep(.wish-card){margin:0;box-sizing:border-box;border-radius:inherit}
+.wish-surface :deep(.plan-card){margin:0;box-sizing:border-box;border-radius:inherit}
 .wish-surface{border-radius:inherit}
 @media(max-width:760px){.wish-swipe{--wish-radius:17px}}
 .dragging .wish-surface{transition:none;user-select:none}

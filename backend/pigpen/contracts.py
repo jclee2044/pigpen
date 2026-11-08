@@ -190,6 +190,11 @@ class RequestUpdate(RequestCreate):
     expected_revision: Revision
 
 
+class RequestDeny(Model):
+    expected_revision: Revision
+    reason: Annotated[str, Field(min_length=1, max_length=4000)]
+
+
 class VoteSet(Model):
     request_id: UUID
     request_revision: Revision
@@ -204,7 +209,7 @@ class CommentCreate(Model):
 
 
 PAYLOADS.update({'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,'wishlist.delete':Delete,
-                 'request.create':RequestCreate,'request.update':RequestUpdate,'request.cancel':Delete,
+                 'request.create':RequestCreate,'request.update':RequestUpdate,'request.cancel':Delete,'request.delete':Delete,'request.deny':RequestDeny,
                  'vote.set':VoteSet,'comment.create':CommentCreate,'notification.read':Delete})
 class InstallationSelect(Model):
     expected_revision: Annotated[StrictInt, Field(ge=0)] = 0
