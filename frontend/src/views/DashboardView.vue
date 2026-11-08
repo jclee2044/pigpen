@@ -1,33 +1,22 @@
 <script setup lang="ts">
-import { computed,ref } from 'vue'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { activeUser,state,rows } from '../state/household'
+import { state,rows } from '../state/household'
 import { shell } from '../state/shell'
 import { summary,recent } from '../lib/selectors'
 import { money } from '../lib/money'
-import PurchaseForm from '../components/PurchaseForm.vue'
 import PurchaseRows from '../components/PurchaseRows.vue'
-import AppIcon from '../components/AppIcon.vue'
-const totals=computed(()=>summary(state.records,shell.month)),add=ref(false)
+import FitMoney from '../components/FitMoney.vue'
+const totals=computed(()=>summary(state.records,shell.month))
 const purchases=computed(()=>recent(rows('purchases').filter(x=>x.transaction_date.slice(0,7)===shell.month)).slice(0,5))
-const attention=computed(()=>rows('approval-requests').filter(r=>r.status==='open'&&r.requester_id!==activeUser.value?.id&&!rows('approval-votes').some(v=>v.request_id===r.id&&v.reviewer_id===activeUser.value?.id&&v.approved&&v.request_revision===r.revision)))
-const approvalStatus=computed(()=>attention.value.length?`${attention.value.length} ${attention.value.length===1?'request needs':'requests need'} review`:'No requests to review')
 const pendingPurchases=computed(()=>state.pending.filter(x=>x.operation.kind==='purchase.create'&&x.state!=='blocked'))
 </script>
 <template>
- <div class="page-heading"><h1>Dashboard</h1><button class="button primary" @click="add=true">+ Add purchase</button></div>
- <div class="toolbar dashboard-toolbar">
-  <label><span class="sr-only">Selected month</span><input v-model="shell.month" type="month" /></label>
-  <RouterLink to="/approvals" class="approval-status" :aria-label="'Approvals: '+approvalStatus">
-   <span class="approval-status-icon" :class="{pending:attention.length}"><AppIcon :name="attention.length?'shield':'check'" /></span>
-   <span class="approval-status-copy"><strong>Approvals</strong><span role="status">{{approvalStatus}}</span></span>
-   <AppIcon name="arrow" class="approval-status-arrow" />
-  </RouterLink>
- </div>
+ <div class="page-heading"><h1>Dashboard</h1></div>
  <div class="metrics">
-  <section class="card"><span class="metric-label">Budgeted</span><strong class="metric-value" data-testid="allocated">{{money(totals.allocated)}}</strong></section>
-  <section class="card"><span class="metric-label">Spent</span><strong class="metric-value" data-testid="spent">{{money(totals.spent)}}</strong><small>Confirmed purchases</small></section>
-  <section class="card blush"><span class="metric-label">Budget remaining</span><strong class="metric-value" data-testid="remaining">{{money(totals.remaining)}}</strong><small>Includes savings activity</small></section>
+  <section class="card"><span class="metric-label">Budgeted</span><FitMoney class="metric-value" data-testid="allocated" :amount="totals.allocated" /></section>
+  <section class="card"><span class="metric-label">Spent</span><FitMoney class="metric-value" data-testid="spent" :amount="totals.spent" /><small>Confirmed purchases</small></section>
+  <section class="card blush"><span class="metric-label">Budget remaining</span><FitMoney class="metric-value" data-testid="remaining" :amount="totals.remaining" /><small>Includes savings activity</small></section>
  </div>
  <div v-if="pendingPurchases.length" class="notice"><strong>{{pendingPurchases.length}} {{pendingPurchases.length===1?'purchase':'purchases'}} waiting to sync.</strong> Not included in confirmed spending.</div>
  <section class="card">
@@ -37,5 +26,4 @@ const pendingPurchases=computed(()=>state.pending.filter(x=>x.operation.kind==='
  </section>
  <div class="section-heading"><h2>Recent purchases</h2><RouterLink to="/purchases">View all →</RouterLink></div>
  <section class="card"><PurchaseRows :purchases="purchases" @select="p=>$router.push('/purchases?detail='+p.id)" /></section>
- <PurchaseForm v-if="add" @close="add=false" />
 </template>

@@ -13,7 +13,7 @@ test('approval status tracks the selected reviewer and purchases show purchaser 
  for(const [actor,item] of [[reviewer.id,'Reviewer purchase'],[owner.id,'Owner purchase']]){
   await command(request,'purchase.create',{item:item!,amount_minor:100,category_id:food.id,transaction_date:'2025-08-05'},actor)
  }
- await page.getByRole('button',{name:'Sync now',exact:true}).click()
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
  await expect(status.getByRole('status')).toHaveText(new RegExp('^'+(before+1)+' requests? needs? review$'))
  await status.click();await expect(page).toHaveURL(/\/approvals$/)
  await page.getByRole('button',{name:'Approval status purchase',exact:true}).click()
@@ -41,7 +41,7 @@ test('stale offline approval is rejected visibly and never approves a revised pr
  await expect(page.getByText('1 action(s) saved on this device · Waiting to sync',{exact:true})).toBeVisible()
  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0)
  await command(request,'request.update',{item:'Changing plan',amount_minor:2500,expected_revision:proposal.revision},owner.id,proposal.id)
- await context.setOffline(false);await page.getByRole('button',{name:'Sync now',exact:true}).click()
+ await context.setOffline(false);await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
  await expect(page.getByText('1 action(s) saved on this device · Review needed',{exact:true})).toBeVisible()
  const latest=await (await request.get('/api/v1/records/approval-requests/'+proposal.id)).json()
  expect(latest.votes.some((x:{reviewer_id:string;approved:boolean})=>x.reviewer_id===reviewer.id&&x.approved)).toBe(false)
@@ -60,7 +60,7 @@ test('archived allocations survive plan editing and mobile routes have no page o
  await command(request,'budget.set',{month:'2025-06',expected_income_minor:10000,allocations:[{category_id:category.id,amount_minor:5000}]},actor.id)
  await command(request,'category.update',{name:category.name,active:false,expected_revision:category.revision},actor.id,category.id)
  await page.goto('/budget');await page.getByLabel('Budget month',{exact:true}).fill('2025-06')
- await page.getByRole('button',{name:'Edit budget',exact:true}).click()
+ await page.getByRole('button',{name:'Edit',exact:true}).click()
  await expect(page.getByLabel('Historical category · Archived',{exact:true})).toBeDisabled()
  await page.getByLabel('Expected income ($)',{exact:true}).fill('200.00')
  await page.getByRole('button',{name:'Save budget',exact:true}).click()
