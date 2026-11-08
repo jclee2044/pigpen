@@ -65,3 +65,27 @@ def test_failed_event_rolls_back_domain_and_support_records(client,users,setting
         assert c.execute(select(func.count()).select_from(s.wishlist_items)).scalar()==0
         assert c.execute(select(func.count()).select_from(s.operations).where(s.operations.c.id==str(op.operation_id))).scalar()==0
         assert c.execute(select(func.count()).select_from(s.audit_events).where(s.audit_events.c.operation_id==str(op.operation_id))).scalar()==0
+
+
+def test_wish_delete_owner_revision_replay_and_sync(client,users):
+    owner,other=[x['id'] for x in users[:2]]
+    wish=submit(client,'wishlist.create',dict(name='Delete wish',price_minor=500),owner)
+    comment=submit(client,'comment.create',dict(target_resource='wishlist-items',target_id=wish['id'],text='Keep history'),other)
+    request=create_request(client,owner)
+    wrong=operation('wishlist.delete',dict(expected_revision=1),other,wish['id'])
+    assert client.post('/api/v1/operations',json=wrong).status_code==403
+    submit(client,'wishlist.update',dict(name=wish['name'],price_minor=600,expected_revision=1),owner,wish['id'])
+    stale=operation('wishlist.delete',dict(expected_revision=1),owner,wish['id'])
+    assert client.post('/api/v1/operations',json=stale).status_code==409
+    cursor=client.get('/api/v1/sync/snapshot').json()['cursor']
+    op=operation('wishlist.delete',dict(expected_revision=2),owner,wish['id'])
+    first=client.post('/api/v1/operations',json=op)
+    assert first.status_code==200
+    assert first.json()['result']['deleted'] is True
+    assert first.json()['result']['revision']==3
+    assert client.post('/api/v1/operations',json=op).json()==first.json()
+    assert all(x['id']!=wish['id'] for x in client.get('/api/v1/wishlist-items').json()['items'])
+    changes=client.get(f'/api/v1/sync/pull?cursor={cursor}').json()['changes']
+    assert any(x['resource']=='wishlist-items' and x['record']['id']==wish['id'] and x['record']['deleted'] for x in changes)
+    assert client.get('/api/v1/records/comments/'+comment['id']).status_code==200
+    assert client.get('/api/v1/records/approval-requests/'+request['id']).status_code==200

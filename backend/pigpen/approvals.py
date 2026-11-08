@@ -1,3 +1,4 @@
+from uuid import uuid5, NAMESPACE_URL
 from sqlalchemy import select
 from . import schema as s
 from .records import get, expect
@@ -16,6 +17,12 @@ class ApprovalServices:
         if row['owner_id']!=op['actor_id']:
             raise DomainError('actor','Only the owner manages their wish list',403)
         return self.save(c,s.wishlist_items,data,row)
+
+    def do_wishlist_delete(self,c,op):
+        row=get(c,s.wishlist_items,op['entity_id']);expect(row,op['data']['expected_revision'])
+        if row['owner_id']!=op['actor_id']:
+            raise DomainError('actor','Only the owner manages their wish list',403)
+        return self.save(c,s.wishlist_items,{'deleted':True},row)
 
     def request_category(self,c,category_id):
         if category_id:
@@ -51,6 +58,27 @@ class ApprovalServices:
         row=self.editable_request(c,op)
         result=self.save(c,s.approval_requests,{'status':'canceled'},row)
         self.notify(c,op,'request.canceled','approval-requests',row['id'])
+        return result
+
+    def do_request_delete(self,c,op):
+        row=get(c,s.approval_requests,op['entity_id']);expect(row,op['data']['expected_revision'])
+        if row['requester_id']!=op['actor_id']:
+            raise DomainError('actor','Only the requester can delete a request',403)
+        if row['status']=='purchased':
+            raise DomainError('request_closed','Purchased requests must retain their purchase history',409,row)
+        return self.save(c,s.approval_requests,{'deleted':True},row)
+
+    def do_request_deny(self,c,op):
+        row=get(c,s.approval_requests,op['entity_id']);expect(row,op['data']['expected_revision'])
+        if row['requester_id']==op['actor_id']:
+            raise DomainError('actor','Requester cannot deny their own request',403)
+        if row['status']!='open':
+            raise DomainError('request_closed','Request is no longer open',409,row)
+        result=self.save(c,s.approval_requests,{'status':'denied'},row)
+        self.save(c,s.comments,dict(id=str(uuid5(NAMESPACE_URL,op['operation_id']+'/denial')),
+            actor_id=op['actor_id'],target_resource='approval-requests',target_id=row['id'],
+            text='Request denied: '+op['data']['reason']))
+        self.notify(c,op,'request.denied','approval-requests',row['id'])
         return result
 
     def request_detail(self,c,request_id):

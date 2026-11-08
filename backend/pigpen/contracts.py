@@ -208,7 +208,7 @@ class CommentCreate(Model):
     text: Annotated[str, Field(min_length=1,max_length=4000)]
 
 
-PAYLOADS.update({'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,
+PAYLOADS.update({'wishlist.create':WishlistCreate,'wishlist.update':WishlistUpdate,'wishlist.delete':Delete,
                  'request.create':RequestCreate,'request.update':RequestUpdate,'request.cancel':Delete,'request.delete':Delete,'request.deny':RequestDeny,
                  'vote.set':VoteSet,'comment.create':CommentCreate,'notification.read':Delete})
 class InstallationSelect(Model):

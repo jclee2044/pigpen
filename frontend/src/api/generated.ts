@@ -466,6 +466,15 @@ export interface wishlist_create {
   "data": WishlistCreate
 }
 
+export interface wishlist_delete {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "wishlist.delete"
+  "data": Delete
+}
+
 export interface wishlist_update {
   "operation_id": string
   "entity_id": string
@@ -496,6 +505,7 @@ export interface Payloads {
   "bill.pay": BillPay
   "wishlist.create": WishlistCreate
   "wishlist.update": WishlistUpdate
+  "wishlist.delete": Delete
   "request.create": RequestCreate
   "request.update": RequestUpdate
   "request.cancel": Delete
