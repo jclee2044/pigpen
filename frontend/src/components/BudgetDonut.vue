@@ -84,6 +84,9 @@ function moveLegendSelection(event:PointerEvent){
  legendMoved=true
  selectLegendAt(event)
 }
+function hoverLegendCategory(event:PointerEvent,id:string){
+ if(event.pointerType==='mouse'&&event.buttons===0&&dragging===undefined&&legendDragging===undefined&&window.matchMedia('(min-width:1024px) and (hover:hover) and (pointer:fine)').matches)selectedId.value=id
+}
 function endLegendSelection(event:PointerEvent){if(legendDragging===event.pointerId)legendDragging=undefined}
 function clickLegend(event:MouseEvent){
  // A compatibility click after a drag must not reselect the starting button.
@@ -117,7 +120,7 @@ const overBudget=computed(()=>Math.max(0,props.rows.reduce((n,x)=>n+x.allocated,
 <template>
 <section class="card budget-chart" aria-label="Budget allocation by category">
  <div class="budget-donut"><svg ref="wheel" data-touch-interactive viewBox="0 0 120 120" role="listbox" tabindex="0" :class="{'pointer-focus':pointerFocus}" @blur="pointerFocus=false" aria-label="Budget categories. Tap or drag around the wheel, or use arrow keys to select." :aria-activedescendant="selected&&selected.percent>0?`${chartId}-${selected.id}`:undefined" @pointerdown="startSelection" @pointermove="moveSelection" @pointerup="endSelection" @pointercancel="endSelection" @lostpointercapture="endSelection" @keydown="selectWithKeyboard"><circle aria-hidden="true" cx="60" cy="60" r="46" fill="none" stroke="var(--line)" stroke-width="17"/><circle v-for="entry in segments" :id="`${chartId}-${entry.id}`" :key="entry.id" role="option" :aria-label="description(entry)" :aria-selected="selected?.id===entry.id" :class="{'segment-muted':selected&&selected.percent>0&&selected.id!==entry.id}" cx="60" cy="60" r="46" fill="none" :stroke="entry.color" :stroke-width="selected?.id===entry.id?20:17" pathLength="100" :stroke-dasharray="`${entry.percent} ${100-entry.percent}`" :stroke-dashoffset="-entry.offset" transform="rotate(-90 60 60)" /></svg><div class="donut-center" role="status" aria-live="polite" aria-atomic="true"><div v-if="selected" class="donut-callout" :aria-label="description(selected)"><small class="donut-category" :title="selected.name">{{selected.name}}</small><FitMoney class="donut-total" :amount="selected.allocated" /><small class="donut-share">{{expected>0?`${(selected.allocated/expected*100).toFixed(1)}%`:'No expected income'}}</small></div><template v-else><small>Expected income</small><FitMoney class="donut-total" :amount="expected" /></template></div></div>
- <ul ref="legend" data-touch-interactive class="budget-legend" @pointerdown="startLegendSelection" @pointermove="moveLegendSelection" @pointerup="endLegendSelection" @pointercancel="endLegendSelection" @lostpointercapture="endLegendSelection" @click.capture="clickLegend" @keydown.esc="selectedId=null" :style="{'--legend-columns':legendColumns}"><li v-for="(entry,index) in entries" :key="entry.id" :style="legendPositions[index]"><button type="button" :data-category-id="entry.id" :aria-pressed="selected?.id===entry.id" @click="selectedId=entry.id"><span class="legend-swatch" :style="{background:entry.color}"/><span>{{entry.name}}</span></button></li></ul>
+ <ul ref="legend" data-touch-interactive class="budget-legend" @pointerdown="startLegendSelection" @pointermove="moveLegendSelection" @pointerup="endLegendSelection" @pointercancel="endLegendSelection" @lostpointercapture="endLegendSelection" @click.capture="clickLegend" @keydown.esc="selectedId=null" :style="{'--legend-columns':legendColumns}"><li v-for="(entry,index) in entries" :key="entry.id" :style="legendPositions[index]"><button type="button" :data-category-id="entry.id" :aria-pressed="selected?.id===entry.id" @pointerenter="hoverLegendCategory($event,entry.id)" @click="selectedId=entry.id"><span class="legend-swatch" :style="{background:entry.color}"/><span>{{entry.name}}</span></button></li></ul>
  <p v-if="overBudget" class="text-small chart-empty">Budgets exceed expected income by {{money(overBudget)}}. Percentages show shares of total allocations; Uncategorized is 0%.</p>
  <p v-if="!total" class="text-small chart-empty">Set category amounts to see your budget breakdown.</p>
 </section>
@@ -140,5 +143,12 @@ const overBudget=computed(()=>Math.max(0,props.rows.reduce((n,x)=>n+x.allocated,
 .budget-legend button>span:nth-child(2){overflow-wrap:anywhere}
 .legend-swatch{width:10px;height:10px;border-radius:50%}
 .chart-empty{align-self:stretch;margin:0}
+@media(min-width:1024px){
+ .budget-chart{display:grid;grid-template-columns:minmax(300px,1fr) repeat(2,minmax(0,1fr));column-gap:0}
+ .budget-donut{width:100%;justify-self:center}
+ .budget-legend{grid-column:2 / span 2;width:100%;max-width:none;column-gap:0}
+ .budget-legend li{width:calc(100% - 32px);max-width:180px;justify-self:center}
+ .chart-empty{grid-column:1 / -1}
+}
 @media(max-width:480px){.budget-chart{gap:22px;padding:16px}.budget-donut{max-width:240px}.donut-total{font-size:20px}.donut-center small{font-size:10px}}
 </style>

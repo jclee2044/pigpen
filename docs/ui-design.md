@@ -133,3 +133,9 @@ Purchase popup layout — November 8, 2026 (confirmed): vertically center purcha
 Fullscreen purchase image dismissal — November 8, 2026 (confirmed): a downward single-finger drag moves the fitted image with the finger and reveals purchase details behind it. Releasing beyond the dismiss threshold slides the image away and returns to the same purchase popup; a short or cancelled pull settles back. Pinching cancels a pending dismissal; enlarged images retain drag-to-pan. Implementation choices: dismiss only at 1× fit, threshold is the smaller of 120px or 18% of the image viewport, with a 180ms exit/return transition skipped for reduced motion. Close/Escape remain available.
 
 Wish save/scroll and swipe grip — November 8, 2026 (confirmed): releasing a reordered card preserves the current viewport. A healthy online reorder must not flash a Waiting to sync panel above the list; durable pending/error recovery remains available. The reorder grip belongs to the swipe surface and follows the card during partial/full swipe-to-delete and slide-back. Grip arrow keys do not also activate swipe keyboard shortcuts.
+
+
+Desktop budget key, November 8: confirmed key to the right of the donut at desktop widths (1024px+); mouse hover selects the category and highlights its slice with center details. Existing selection persists after hover leaves. Smaller viewports retain the stacked layout and tap/drag behavior. This supersedes the earlier all-width stacked layout.
+
+
+Desktop budget spacing, November 8: confirmed even distribution of the chart and two key columns across the card; use three equal desktop tracks when space permits, retaining the 300px donut on narrower desktops. Hover selection and mobile layout remain unchanged.

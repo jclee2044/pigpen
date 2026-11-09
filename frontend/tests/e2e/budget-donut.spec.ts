@@ -73,14 +73,32 @@ test('budget wheel selects by tap, drag, touch and keyboard with income percenta
  const afterKeyboard=await point(food);await page.mouse.click(afterKeyboard.x,afterKeyboard.y)
  expect(await wheel.evaluate(el=>getComputedStyle(el).outlineStyle)).toBe('none')
  await page.keyboard.press('Escape')
- for(const width of [320,390,1440]){
+ for(const width of [320,390,768,1024,1440]){
   await page.setViewportSize({width,height:900});await wheel.evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}))
   const size=(await wheel.boundingBox())!.width
   expect(size).toBeCloseTo(width===320?187.5:width===390?240:300,0)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
   const gutters=await key.evaluate(el=>{const key=el.getBoundingClientRect(),card=el.closest('.budget-chart')!.getBoundingClientRect();return {left:key.left-card.left,right:card.right-key.right}})
   expect(gutters.left).toBeGreaterThanOrEqual(40)
-  expect(gutters.right).toBeCloseTo(gutters.left,0)
+  const wheelBox=(await wheel.boundingBox())!,keyBounds=(await key.boundingBox())!
+  if(width>=1024){
+   expect(keyBounds.x).toBeGreaterThanOrEqual(wheelBox.x+wheelBox.width)
+   expect(Math.abs(keyBounds.y+keyBounds.height/2-wheelBox.y-wheelBox.height/2)).toBeLessThan(2)
+   await keyFood.hover()
+   await expect(food).toHaveAttribute('aria-selected','true')
+   await expect(keyFood).toHaveAttribute('aria-pressed','true')
+   await key.getByRole('button',{name:'Wheel housing',exact:true}).hover()
+   await expect(housing).toHaveAttribute('stroke-width','20')
+   await expect(food).toHaveClass(/segment-muted/)
+   await expect(keyFood).toHaveAttribute('aria-pressed','false')
+   await expect(callout).toContainText('Wheel housing')
+  }else{
+   expect(gutters.right).toBeCloseTo(gutters.left,0)
+   expect(keyBounds.y).toBeGreaterThan(wheelBox.y+wheelBox.height)
+   await page.getByRole('heading',{name:'Budget',exact:true}).click()
+   await keyFood.hover()
+   await expect(callout).toHaveCount(0)
+  }
   const boxes=await page.locator('.budget-legend li').evaluateAll(elements=>elements.map(el=>{const box=el.getBoundingClientRect();return {x:Math.round(box.left),y:Math.round(box.top)}}))
   expect(new Set(boxes.map(box=>box.x)).size).toBe(2)
   for(let i=1;i<boxes.length;i++){
