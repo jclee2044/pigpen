@@ -84,8 +84,21 @@ function moveLegendSelection(event:PointerEvent){
  legendMoved=true
  selectLegendAt(event)
 }
+function isDesktopHover(event:PointerEvent){
+ return event.pointerType==='mouse'&&event.buttons===0&&dragging===undefined&&legendDragging===undefined&&window.matchMedia('(min-width:1024px) and (hover:hover) and (pointer:fine)').matches
+}
 function hoverLegendCategory(event:PointerEvent,id:string){
- if(event.pointerType==='mouse'&&event.buttons===0&&dragging===undefined&&legendDragging===undefined&&window.matchMedia('(min-width:1024px) and (hover:hover) and (pointer:fine)').matches)selectedId.value=id
+ if(isDesktopHover(event))selectedId.value=id
+}
+function dismissHoverOutside(event:PointerEvent){
+ if(!selectedId.value||!isDesktopHover(event))return
+ const target=event.target
+ if(target instanceof Node&&wheel.value?.contains(target))return
+ if(target instanceof Element&&legend.value?.contains(target)&&target.closest('button[data-category-id]'))return
+ selectedId.value=null
+}
+function dismissHoverWindow(event:PointerEvent){
+ if(event.relatedTarget===null&&isDesktopHover(event))selectedId.value=null
 }
 function endLegendSelection(event:PointerEvent){if(legendDragging===event.pointerId)legendDragging=undefined}
 function clickLegend(event:MouseEvent){
@@ -110,10 +123,12 @@ const legendPositions=computed(()=>{
 let observer:ResizeObserver|undefined
 onMounted(()=>{
  document.addEventListener('pointerdown',dismissOutside,true)
+ document.addEventListener('pointermove',dismissHoverOutside,true)
+ document.addEventListener('pointerout',dismissHoverWindow,true)
  observer=new ResizeObserver(([entry])=>{if(entry)legendWidth.value=entry.contentRect.width})
  if(legend.value)observer.observe(legend.value)
 })
-onBeforeUnmount(()=>{observer?.disconnect();document.removeEventListener('pointerdown',dismissOutside,true)})
+onBeforeUnmount(()=>{observer?.disconnect();document.removeEventListener('pointerdown',dismissOutside,true);document.removeEventListener('pointermove',dismissHoverOutside,true);document.removeEventListener('pointerout',dismissHoverWindow,true)})
 const total=computed(()=>entries.value.reduce((n,x)=>n+x.allocated,0))
 const overBudget=computed(()=>Math.max(0,props.rows.reduce((n,x)=>n+x.allocated,0)-props.expected))
 </script>

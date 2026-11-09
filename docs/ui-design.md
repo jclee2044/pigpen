@@ -139,3 +139,6 @@ Desktop budget key, November 8: confirmed key to the right of the donut at deskt
 
 
 Desktop budget spacing, November 8: confirmed even distribution of the chart and two key columns across the card; use three equal desktop tracks when space permits, retaining the 300px donut on narrower desktops. Hover selection and mobile layout remain unchanged.
+
+
+Desktop budget hover dismissal, November 8 (confirmed): hovering outside the donut or actual key category buttons clears the selection, including blank key space and page areas. This supersedes earlier persistence after hover leaves. Desktop mouse only; touch/keyboard behavior remains available.

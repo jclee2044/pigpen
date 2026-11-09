@@ -92,6 +92,20 @@ test('budget wheel selects by tap, drag, touch and keyboard with income percenta
    await expect(food).toHaveClass(/segment-muted/)
    await expect(keyFood).toHaveAttribute('aria-pressed','false')
    await expect(callout).toContainText('Wheel housing')
+   // Empty key space and the rest of the page clear selection without a click.
+   const firstKeyBox=(await keyFood.boundingBox())!
+   await page.mouse.move(keyBounds.x+2,firstKeyBox.y+firstKeyBox.height/2)
+   await expect(callout).toHaveCount(0)
+   await expect(housing).toHaveAttribute('aria-selected','false')
+   await keyFood.hover()
+   await page.getByRole('heading',{name:'Budget',exact:true}).hover()
+   await expect(callout).toHaveCount(0)
+   await expect(keyFood).toHaveAttribute('aria-pressed','false')
+   await keyFood.hover()
+   await page.mouse.move(wheelBox.x+wheelBox.width/2,wheelBox.y+wheelBox.height/2)
+   await expect(callout).toContainText('Wheel food')
+   await page.mouse.move(wheelBox.x+wheelBox.width/2,wheelBox.y+wheelBox.height+8)
+   await expect(callout).toHaveCount(0)
   }else{
    expect(gutters.right).toBeCloseTo(gutters.left,0)
    expect(keyBounds.y).toBeGreaterThan(wheelBox.y+wheelBox.height)
