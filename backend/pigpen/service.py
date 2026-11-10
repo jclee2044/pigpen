@@ -13,13 +13,21 @@ from .approvals import ApprovalServices
 from .notifications import NotificationServices
 from .attachments import AttachmentServices
 from .push import PushServices
+from .receipts import ReceiptServices
+from .image_lock import image_lock
 
 
-class Service(BudgetServices, FinanceServices, ApprovalServices, NotificationServices, AttachmentServices, PushServices):
+class Service(ReceiptServices, BudgetServices, FinanceServices, ApprovalServices, NotificationServices, AttachmentServices, PushServices):
     def __init__(self, db):
         self.db = db
 
     def execute(self, operation):
+        if operation.kind.startswith("receipt."):
+            with image_lock(self.db.settings):
+                return self._execute(operation)
+        return self._execute(operation)
+
+    def _execute(self, operation):
         op = operation.model_dump(mode='json')
         # Preserve hashes of category commands saved by clients before 0009.
         digest_op = {**op, 'data': dict(op['data'])}

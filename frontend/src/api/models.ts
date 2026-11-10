@@ -16,7 +16,7 @@ export interface Request extends Row { requester_id: string; item: string; amoun
 export interface Vote extends Row { request_id: string; reviewer_id: string; approved: boolean; request_revision: number }
 export interface Comment extends Row { actor_id: string; target_resource: 'wishlist-items'|'approval-requests'; target_id: string; text: string }
 export interface Note extends Row { recipient_id: string; kind: string; target_resource: string; target_id: string; read_at: string|null; message?: string }
-export interface Attachment extends Row { purchase_id: string; filename: string; media_type: string; byte_size: number; checksum: string }
+export interface Attachment extends Row { receipt_scan_id?:string|null; expires_at?:string|null; expired_at?:string|null; keep_indefinitely?:boolean; purchase_id: string; filename: string; media_type: string; byte_size: number; checksum: string }
 export interface Resources { household: Household; users: User; categories: Category; 'budget-months': Budget; allocations: Allocation; purchases: Purchase; income: Income; savings: Savings; 'recurring-bills': Bill; 'bill-occurrences': Row; 'wishlist-items': Wish; 'approval-requests': Request; 'approval-votes': Vote; comments: Comment; notifications: Note; attachments: Attachment }
 export type Records = { [K in keyof Resources]: Resources[K][] }
 export interface Snapshot { cursor: number; records: Records }

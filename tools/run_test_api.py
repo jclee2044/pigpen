@@ -16,6 +16,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument('--port',type=int,default=8765)
 parser.add_argument('--demo',action='store_true')
 parser.add_argument('--static',action='store_true')
+parser.add_argument('--receipt-worker',action='store_true')
 args=parser.parse_args()
 with tempfile.TemporaryDirectory(prefix='pigpen-browser-test-') as directory:
     settings=Settings(Path(directory),'test',static_dir=ROOT/'frontend/dist' if args.static else None)
@@ -41,4 +42,9 @@ with tempfile.TemporaryDirectory(prefix='pigpen-browser-test-') as directory:
         for item,amount,category in [('Weekly groceries',8640,'Food'),('Books for the weekend',3000,'Alex Personal'),('Fuel for the week',4200,'Gas')]:
             command('purchase.create',{'item':item,'amount_minor':amount,'category_id':cats[category],'transaction_date':day},alex['id'])
         command('request.create',{'item':'A picnic together','amount_minor':6500,'description':'A small weekend plan.'},alex['id'])
+    if args.receipt_worker:
+        from threading import Thread,Event
+        from pigpen.receipt_worker import loop
+        from pigpen.database import Database
+        Thread(target=loop,args=(Database(settings),Event()),daemon=True).start()
     uvicorn.run(create_app(settings),host='127.0.0.1',port=args.port,log_level='warning')

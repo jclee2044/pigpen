@@ -96,7 +96,9 @@ export async function mutate<K extends Kind>(kind:K,data:Payloads[K],entity?:str
   }catch(error){
    const blocked=error instanceof ApiError&&error.status>=400&&error.status<500
    item.state=blocked?'blocked':'uncertain';item.error=message(error);item.details=error instanceof ApiError?error.details:null
-   await savePending(item);state.pending=await readPending()
+   if(kind==='receipt.confirm'&&error instanceof ApiError&&error.code==='receipt_duplicate')await removePending(op.operation_id)
+   else await savePending(item)
+   state.pending=await readPending()
    if(error instanceof ApiError&&error.status===0)state.online=false
    if(!blocked)throw new PendingSubmissionError(op.operation_id,'Your submission is saved on this device. Retry it to check the server outcome safely.')
    throw error

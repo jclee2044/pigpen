@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import pigThinking from '../../../assets/states/pig-thinking.svg?url'
-withDefaults(defineProps<{compact?:boolean;active?:boolean}>(),{compact:false,active:true})
+withDefaults(defineProps<{compact?:boolean;active?:boolean;label?:string}>(),{compact:false,active:true,label:'Loading...'})
 </script>
 <template>
  <div class="app-loading" :class="{compact,thinking:active}" role="status" aria-live="polite">
   <img :src="pigThinking" alt="" width="240" height="200" />
-  <span>Loading...</span>
+  <span>{{label}}</span>
  </div>
 </template>
 <style scoped>

@@ -1,4 +1,6 @@
 """Application factory. Importing this module has no database side effects."""
+from contextlib import asynccontextmanager
+from threading import Event, Thread
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -11,7 +13,20 @@ from sqlalchemy.exc import OperationalError
 
 def create_app(settings: Settings | None = None):
     settings = settings or Settings.from_env()
-    app = FastAPI(title="PigPen API", version="1.0.0")
+    @asynccontextmanager
+    async def lifespan(app):
+        stop=Event()
+        worker=None
+        if settings.environment != 'test':
+            from .receipt_worker import loop
+            worker=Thread(target=loop,args=(app.state.database,stop),daemon=True)
+            worker.start()
+        yield
+        stop.set()
+        if worker:
+            import asyncio
+            await asyncio.to_thread(worker.join,50)
+    app = FastAPI(title="PigPen API", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.database = Database(settings)
 

@@ -1,0 +1,4 @@
+# Isolated CPU OCR worker; install only into backend/.ocr-venv.
+rapidocr==3.10.0
+onnxruntime==1.31.1
+Pillow==13.0.0

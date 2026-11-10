@@ -6,10 +6,12 @@ from .contracts import Operation, Model, AttachmentOperation, AttachmentDeleteOp
 from pydantic import Field, AwareDatetime
 from . import sync
 from .domain import month_bounds
-from .attachments import MAX_UPLOAD, store_image, attachment_path
+from .attachments import MAX_UPLOAD, store_image, attachment_path, image_metadata
 from .service import Service, get, avatar_options
 from . import schema as s
 from .errors import DomainError
+from .image_lock import image_lock
+from .receipts import public_scan, require_image
 
 
 class PushBatch(Model):
@@ -55,7 +57,11 @@ def router(db):
             data=file.file.read(MAX_UPLOAD+1)
         finally:
             file.file.close()
-        metadata=store_image(db.settings,data,file.content_type,file.filename)
+        with image_lock(db.settings):
+            metadata=store_image(db.settings,data,file.content_type,file.filename)
+            return finish_upload(purchase_id,operation_id,actor_id,client_time,metadata)
+
+    def finish_upload(purchase_id,operation_id,actor_id,client_time,metadata):
         operation=AttachmentOperation(operation_id=operation_id,entity_id=uuid5(NAMESPACE_URL,str(purchase_id)+'/'+str(operation_id)),
             actor_id=actor_id,client_time=client_time,data={'purchase_id':purchase_id,**metadata})
         return service.execute(operation)
@@ -71,6 +77,7 @@ def router(db):
         with db.transaction() as c:
             record=get(c,s.attachments,identifier)
             get(c,s.purchases,record['purchase_id'])
+            require_image(record)
             path=attachment_path(db.settings,record)
         return FileResponse(path,media_type=record['media_type'],filename=record['filename'],content_disposition_type='attachment',
                             headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
@@ -81,6 +88,42 @@ def router(db):
         operation=AttachmentDeleteOperation(operation_id=operation_id,entity_id=identifier,actor_id=actor_id,
                                             client_time=client_time,data={'expected_revision':expected_revision})
         return service.execute(operation)
+
+    @routes.post('/receipt-scans', status_code=202)
+    def scan_upload(operation_id: UUID = Form(...), actor_id: UUID = Form(...),
+                    client_time: AwareDatetime = Form(...), file: UploadFile = File(...)):
+        with db.transaction() as c:
+            get(c,s.users,actor_id,active=True)
+        try:
+            data=file.file.read(MAX_UPLOAD+1)
+        finally:
+            file.file.close()
+        with image_lock(db.settings):
+            metadata=image_metadata(data,file.content_type,file.filename)
+            return JSONResponse(service.create_scan(str(operation_id),str(actor_id),client_time.isoformat(),metadata,data),
+                                status_code=202,headers={'Cache-Control':'no-store'})
+
+    @routes.get('/receipt-scans')
+    def scan_list(actor_id: UUID):
+        with db.transaction() as c:
+            get(c,s.users,actor_id,active=True)
+            items=[public_scan(dict(r)) for r in c.execute(select(s.receipt_scans).where(
+                s.receipt_scans.c.actor_id==str(actor_id),s.receipt_scans.c.status.not_in(['confirmed','canceled']),
+                s.receipt_scans.c.expired_at.is_(None)).order_by(s.receipt_scans.c.created_at.desc()).limit(50)).mappings()]
+        return JSONResponse({'items':items},headers={'Cache-Control':'no-store'})
+
+    @routes.get('/receipt-scans/{identifier}')
+    def scan_detail(identifier: UUID):
+        with db.transaction() as c:
+            row=public_scan(get(c,s.receipt_scans,identifier))
+        return JSONResponse(row,headers={'Cache-Control':'no-store'})
+
+    @routes.get('/receipt-scans/{identifier}/content')
+    def scan_image(identifier: UUID):
+        with db.transaction() as c:
+            row=get(c,s.receipt_scans,identifier);require_image(row)
+            path=attachment_path(db.settings,row)
+        return FileResponse(path,media_type=row['media_type'],headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
 
     @routes.get('/installations/{identifier}')
     def installation_detail(identifier: UUID):

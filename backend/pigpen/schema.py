@@ -141,3 +141,18 @@ push_deliveries = Table('push_deliveries', metadata,
     Column('subscription_id', String, ForeignKey('subscriptions.id'), nullable=False), Column('binding_revision', Integer, nullable=False),
     Column('delivered_at', String, nullable=False), UniqueConstraint('notification_id','subscription_id','binding_revision'))
 RESOURCES.update({'attachments':attachments})
+
+# Internal scan jobs do not enter household sync until purchase confirmation.
+receipt_scans = Table('receipt_scans', metadata, *record_columns(),
+    Column('actor_id',String,ForeignKey('users.id'),nullable=False),Column('payload_hash',String,nullable=False),
+    Column('status',String,nullable=False),Column('storage_key',String,nullable=False),Column('checksum',String,nullable=False),
+    Column('filename',String,nullable=False),Column('media_type',String,nullable=False),Column('byte_size',Integer,nullable=False),
+    Column('suggestions',JSON),Column('error',String),Column('attempts',Integer,nullable=False),
+    Column('lease_until',String),Column('lease_token',String),Column('expires_at',String,nullable=False),
+    Column('keep_indefinitely',Boolean,nullable=False),Column('expired_at',String),
+    Column('purchase_id',String,ForeignKey('purchases.id'),unique=True))
+for name in ('receipt_scan_id','expires_at','expired_at'):
+    attachments.append_column(Column(name,String))
+attachments.append_column(Column('keep_indefinitely',Boolean,nullable=False,server_default='0'))
+
+Index('receipt_queue',receipt_scans.c.status,receipt_scans.c.created_at)

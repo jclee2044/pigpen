@@ -118,3 +118,9 @@ npm --prefix frontend run test:pwa
 # Development UI (API must be running with explicit external development storage):
 npm --prefix frontend run dev
 ```
+
+## Receipt scanning — November 9, 2026
+
+Purchases now offers local receipt scanning with an editable review step and automatic photo attachment. Scanned photos expire after three calendar months unless Keep indefinitely is selected; purchase details remain. See [implementation plan](docs/receipt-scan-plan.md), [OCR setup and retention operations](docs/backend-operations.md), and [verification and acceptance limitations](output/receipt-scan/verification.md). Historical paragraphs above describe earlier implementation stages.
+
+Receipt extraction was subsequently tested against public photographed receipts and refined. Use it as a **scan-and-review assistant**: verify the final charged amount (including handwriting), currency, date and item details before saving. The review acknowledgement is required. See [real-photo evaluation and recommendation limits](output/receipt-online/follow-up.md).

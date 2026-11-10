@@ -33,7 +33,7 @@ test('recurring budgets, shared empty states and every page at iPhone widths',as
    if(['/purchases','/wish-lists','/approvals','/notifications'].includes(route))await expect(page.getByText('Nothing here yet',{exact:true})).toBeVisible()
    if(width===375)await page.screenshot({path:info.outputPath(route.replaceAll('/','')||'dashboard')+'.png',fullPage:true})
   }
-  await page.goto('/purchases');await page.getByRole('button',{name:'New purchase',exact:true}).click()
+  await page.goto('/purchases');await page.getByRole('button',{name:'New purchase',exact:true}).click();await page.getByRole('button',{name:'Enter manually',exact:true}).click()
   const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible()
   expect(await dialog.evaluate(e=>e.scrollWidth<=e.clientWidth)).toBe(true)
   await page.getByRole('button',{name:'Close dialog'}).click()

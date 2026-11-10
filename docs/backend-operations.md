@@ -112,3 +112,29 @@ The Vue/TypeScript/Router frontend is now integrated through the documented JSON
 ### VAPID contact URI compatibility — November 8, 2026
 
 The pinned py-vapid subject regex rejects HTTPS contact URIs containing ports or paths, including the approved installation URL on port 8445. PigPen now validates the HTTPS/mailto contact itself and passes a configured Vapid signer to pywebpush; audience validation, P-256 signing, encrypted payloads and redirect blocking remain in place. This follows the HTTPS/mailto contact schemes in RFC 8292 section 2.1 (https://www.rfc-editor.org/rfc/rfc8292.html#section-2.1). Invalid contact configuration returns the existing generic push-unavailable response. Pushes use a one-day provider TTL so temporarily disconnected devices can receive them later. No dependency or JSON contract changes.
+
+## Local receipt OCR and retention — November 9, 2026
+
+OCR is isolated from the API environment in `backend/.ocr-venv`: RapidOCR 3.10.0, ONNX Runtime 1.31.1 and Pillow 13.0.0, with full dependency pins in `backend/requirements-ocr.lock`. These dependencies provide local text detection/recognition and orientation handling; no hosted AI service, GPU, new system package or separate database is required. Model provenance/license notices are retained under `docs/licenses/receipt-ocr/`.
+
+Provision from the checkout with the existing interpreter:
+
+```sh
+python3 -m venv backend/.ocr-venv
+backend/.ocr-venv/bin/python -m pip install -r backend/requirements-ocr.txt -c backend/requirements-ocr.lock
+backend/.ocr-venv/bin/python tools/provision_receipt_ocr.py
+```
+
+Provisioning copies the three models bundled in the pinned wheel into ignored `backend/.ocr-models/` and checks the committed `tools/receipt-models.json` hashes. Inference checks hashes, uses explicit local paths, disables ONNX telemetry and rejects Python network connections. Neither receipts nor extracted text are sent to an external service. Production/test receipt images and OCR output remain outside Git; committed fixtures are synthetic.
+
+The existing API service owns one background worker thread; each job runs a fresh isolated OCR subprocess (two intra-op threads, one inter-op thread, 45-second timeout). SQLite leases prevent concurrent OCR jobs across workers, expire after 90 seconds, and recover interrupted work with at most three attempts. A fresh subprocess releases model RAM after each scan. No additional service/unit configuration is needed. Test apps do not start a worker unless the disposable browser harness explicitly requests one.
+
+A daily cleanup also runs on worker startup and before each backup. It expires scanned-receipt photos three calendar months from original server storage, unless Keep indefinitely is enabled. It preserves purchase details, audits expiry, syncs expired attachment metadata, and removes bytes only when all references permit it. Failed/canceled drafts also expire. Ordinary/manual uploads retain their previous policy because receipt versus bank-image type is unknown. Historical backups retain photos until normal backup retention; separately retained upgrade backups are not automatically pruned. This backup behavior was confirmed by the user on November 9. Restore preserves expiry metadata; content routes refuse overdue images immediately, and startup cleanup removes expired objects.
+
+Image storage, confirmation, retention and backup publication share `.images.lock` in private runtime storage. An interrupted unlink is retried from persisted expired metadata. Never manually remove referenced upload objects. To recover OCR after model corruption, rerun the pinned provisioner and retry the failed scan. Generic failures deliberately omit financial payloads and subprocess stderr. Old application code must not be used to access expired-image backups; rollback before feature use is covered by the deployment rehearsal, while later rollback requires retaining retention-aware content/backup handling or restoring a verified pre-feature snapshot explicitly.
+
+Receipt follow-up verification: parser version 9 adds conservative amount conflict checks; `receipt_layout.py` performs framework-free row association used by the isolated adapter. No model or dependency changes were required. Existing ready drafts are not rewritten on upgrade. OCR suggestions and merchant/item text must be checked against the photo; the updated UI requires review before saving. Current source/release rollback and backup locations are in `docs/home-server-deployment.md`. The final public-corpus measurements and their non-independent/regression limitations are recorded in `output/receipt-online/follow-up.md`.
+
+Receipt isolation uses existing OpenCV/numpy from the pinned OCR environment; no new dependencies, models or services. `tools/receipt_image.py` isolates a dominant light-paper boundary before recognition; ambiguous scenes fail with a retake instruction using the existing scan status/error contract. The stored original is unchanged. This is conservative geometric segmentation, not semantic receipt recognition: pale backgrounds, folds, heavy perspective or clipped edges can require a retake, and a white frame cannot prove all content inside it belongs to a receipt. Ready drafts are not reprocessed. Run `backend/.ocr-venv/bin/python tools/test_receipt_image.py` for isolation checks.
+
+Parser v10 and tight-scan boundary refinement: a mostly white footer touching one edge is accepted only with three other near-completely paper-filled edges. This accommodates clipped digital-receipt footers. OCR dollar decimal commas are normalized without treating unmarked comma numbers as dollars. No new dependencies. Existing ready scans keep their original suggestions; rescan to use the new parser.

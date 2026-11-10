@@ -34,6 +34,14 @@ def validate_image(data,claimed_type):
     return media,extension
 
 
+def image_metadata(data, media_type, filename):
+    media,extension=validate_image(data,media_type)
+    digest=sha256(data).hexdigest()
+    filename=Path((filename or 'image').replace('\\','/')).name
+    filename=''.join(x for x in filename if x.isprintable())[:200] or 'image'+extension
+    return dict(storage_key=digest+extension,filename=filename,media_type=media,byte_size=len(data),checksum=digest)
+
+
 def store_image(settings,data,media_type,filename):
     media,extension=validate_image(data,media_type)
     digest=sha256(data).hexdigest();key=digest+extension

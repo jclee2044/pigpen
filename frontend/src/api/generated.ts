@@ -126,6 +126,19 @@ export interface PurchaseUpdate {
   "expected_revision": number
 }
 
+export interface ReceiptConfirm {
+  "scan_id": string
+  "expected_revision": number
+  "keep_indefinitely"?: boolean
+  "allow_duplicate"?: boolean
+  "purchase": PurchaseCreate
+}
+
+export interface ReceiptRetention {
+  "expected_revision": number
+  "keep_indefinitely": boolean
+}
+
 export interface RequestCreate {
   "item": string
   "amount_minor": number
@@ -365,6 +378,42 @@ export interface purchase_update {
   "data": PurchaseUpdate
 }
 
+export interface receipt_cancel {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "receipt.cancel"
+  "data": Delete
+}
+
+export interface receipt_confirm {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "receipt.confirm"
+  "data": ReceiptConfirm
+}
+
+export interface receipt_retention {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "receipt.retention"
+  "data": ReceiptRetention
+}
+
+export interface receipt_retry {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "receipt.retry"
+  "data": Delete
+}
+
 export interface request_cancel {
   "operation_id": string
   "entity_id": string
@@ -544,6 +593,10 @@ export interface Payloads {
   "installation.select": InstallationSelect
   "subscription.set": SubscriptionSet
   "subscription.disable": Delete
+  "receipt.confirm": ReceiptConfirm
+  "receipt.cancel": Delete
+  "receipt.retry": Delete
+  "receipt.retention": ReceiptRetention
 }
 
 export type Kind = keyof Payloads

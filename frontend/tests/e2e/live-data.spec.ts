@@ -15,12 +15,12 @@ async function addProfile(page:Page,name:string){
 }
 
 async function addPurchase(page:Page,item:string,amount:string,date:string){
- await page.getByRole('button',{name:'New purchase',exact:true}).click()
+ await page.getByRole('button',{name:'New purchase',exact:true}).click();await page.getByRole('button',{name:'Enter manually',exact:true}).click()
  await page.getByLabel('Item or service').fill(item)
  await page.getByLabel('Amount ($)',{exact:true}).fill(amount)
  await page.getByLabel('Transaction date',{exact:true}).fill(date)
  await page.getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'})
- await page.getByRole('button',{name:'Save purchase',exact:true}).click()
+ await page.getByRole('button',{name:'Save',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
 }
 

@@ -248,4 +248,18 @@ class AttachmentDeleteOperation(Envelope):
 
 
 PAYLOADS.update({'installation.select':InstallationSelect,'subscription.set':SubscriptionSet,'subscription.disable':Delete})
+class ReceiptConfirm(Model):
+    scan_id: UUID
+    expected_revision: Revision
+    keep_indefinitely: StrictBool = False
+    allow_duplicate: StrictBool = False
+    purchase: PurchaseCreate
+
+
+class ReceiptRetention(Model):
+    expected_revision: Revision
+    keep_indefinitely: StrictBool
+
+
+PAYLOADS.update({'receipt.confirm':ReceiptConfirm,'receipt.cancel':Delete,'receipt.retry':Delete,'receipt.retention':ReceiptRetention})
 Operation = operation_type()

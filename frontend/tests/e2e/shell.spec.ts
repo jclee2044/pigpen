@@ -33,10 +33,10 @@ test('onboarding, profiles and responsive routes persist after reload',async({pa
  await page.getByLabel('Expected income ($)',{exact:true}).fill('1000.00');await page.getByLabel('Food',{exact:true}).fill('200.00');await page.getByRole('button',{name:'Save budget',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
  await page.goto('/');await expect(page.getByTestId('allocated')).toHaveText('$200.00')
- await page.goto('/purchases');await page.getByRole('button',{name:'New purchase',exact:true}).click();await page.getByLabel('Item or service').fill('Weekly groceries');await page.getByLabel('Amount ($)',{exact:true}).fill('12.34');await page.getByLabel('Transaction date',{exact:true}).fill('2025-01-07');await page.getByRole('dialog').getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'})
+ await page.goto('/purchases');await page.getByRole('button',{name:'New purchase',exact:true}).click();await page.getByRole('button',{name:'Enter manually',exact:true}).click();await page.getByLabel('Item or service').fill('Weekly groceries');await page.getByLabel('Amount ($)',{exact:true}).fill('12.34');await page.getByLabel('Transaction date',{exact:true}).fill('2025-01-07');await page.getByRole('dialog').getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'})
  let interrupted=false
  await page.route('**/api/v1/operations',async route=>{if(!interrupted&&route.request().postDataJSON().kind==='purchase.create'){interrupted=true;await route.fetch();await route.abort()}else await route.continue()})
- await page.getByRole('button',{name:'Save purchase',exact:true}).click();await expect(page.getByRole('button',{name:'Retry saved submission'})).toBeVisible();await page.getByRole('button',{name:'Retry saved submission'}).click()
+ await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('button',{name:'Retry saved submission'})).toBeVisible();await page.getByRole('button',{name:'Retry saved submission'}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0);await page.goto('/');await expect(page.getByTestId('spent')).toHaveText('$12.34');await page.reload();await expect(page.getByTestId('spent')).toHaveText('$12.34')
  const server=await page.request.get('/api/v1/budget-months/2025-01');expect((await server.json()).spent_minor).toBe(1234)
  expect((await (await page.request.get('/api/v1/purchases?month=2025-01')).json()).items).toHaveLength(1)

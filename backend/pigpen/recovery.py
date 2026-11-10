@@ -41,7 +41,28 @@ def _publish(stage,destination):
     stage.rename(destination)
 
 
+def image_references(connection):
+    columns={r[1] for r in connection.execute('PRAGMA table_info(attachments)')}
+    if 'expired_at' not in columns:
+        return connection.execute('SELECT storage_key,checksum FROM attachments').fetchall()
+    # Preserve non-expired metadata references even when overdue until cleanup runs.
+    return connection.execute('SELECT storage_key,checksum FROM attachments WHERE expired_at IS NULL UNION SELECT storage_key,checksum FROM receipt_scans WHERE expired_at IS NULL').fetchall()
+
+
 def backup(settings,destination):
+    from .image_lock import image_lock
+    # Older schema backups must remain possible before upgrading.
+    with closing(sqlite3.connect(settings.database_path.as_uri()+'?mode=ro',uri=True)) as c:
+        has_scans=c.execute("SELECT 1 FROM sqlite_master WHERE name='receipt_scans'").fetchone()
+    if has_scans:
+        from .receipt_worker import cleanup
+        from .database import Database
+        cleanup(Database(settings))
+    with image_lock(settings):
+        return _backup(settings,destination)
+
+
+def _backup(settings,destination):
     settings.verify_storage()
     destination=external_path(destination)
     if destination.exists() or destination.is_relative_to(settings.data_dir) or settings.data_dir.is_relative_to(destination):
@@ -61,7 +82,7 @@ def backup(settings,destination):
         files={'pigpen.sqlite3':digest(output)}
         # Read references from the snapshot, never from the now-moving live database.
         with closing(sqlite3.connect(output.as_uri()+'?mode=ro&immutable=1',uri=True)) as snapshot:
-            attachments=snapshot.execute('SELECT storage_key,checksum FROM attachments').fetchall()
+            attachments=image_references(snapshot)
         for key,expected in attachments:
             if not re.fullmatch(r'[0-9a-f]{64}\.(png|jpg|webp)',key):
                 raise ValueError('Invalid attachment reference')
@@ -95,7 +116,7 @@ def validate_backup(source):
             raise ValueError('Backup checksum validation failed')
     check_database(source/'pigpen.sqlite3')
     with closing(sqlite3.connect((source/'pigpen.sqlite3').as_uri()+'?mode=ro&immutable=1',uri=True)) as c:
-        for key,expected in c.execute('SELECT storage_key,checksum FROM attachments'):
+        for key,expected in image_references(c):
             if files.get('uploads/'+key)!=expected:
                 raise ValueError('Backup is missing a referenced attachment')
     return files

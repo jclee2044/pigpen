@@ -44,7 +44,7 @@ for (const width of [390, 1440]) {
    expect(failures,route).toEqual([])
    if(route==='/'||route==='/budget')await page.screenshot({path:info.outputPath(`${route==='/'?'dashboard':'budget'}-${width}.png`),fullPage:true})
    if(route==='/purchases'){
-    await page.getByRole('button',{name:'New purchase',exact:true}).click()
+    await page.getByRole('button',{name:'New purchase',exact:true}).click();await page.getByRole('button',{name:'Enter manually',exact:true}).click()
     await expect(page.locator('dialog')).toHaveCSS('background-color','rgb(25, 23, 27)')
     await expect(page.getByLabel('Item or service')).toHaveCSS('background-color','rgb(37, 34, 40)')
     await page.screenshot({path:info.outputPath(`form-${width}.png`),fullPage:true})
