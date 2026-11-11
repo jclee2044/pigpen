@@ -51,3 +51,7 @@ Thumbs.db
 # Browser verification artifacts
 playwright-report/
 test-results/
+
+# Private local verification captures and repository maintenance scratch
+/output/
+/.privacy-cleanup/
