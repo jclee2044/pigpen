@@ -2,11 +2,12 @@
 import { useId } from 'vue'
 import horizontalLogo from '../assets/pigpen-horizontal.png'
 
+defineProps<{ mascotOnly?: boolean }>()
 const id = useId()
 </script>
 
 <template>
- <svg class="brand-logo" viewBox="230 135 1820 450" aria-hidden="true" focusable="false">
+ <svg class="brand-logo" :viewBox="mascotOnly ? '220 130 650 460' : '230 135 1820 450'" aria-hidden="true" focusable="false">
   <defs>
    <clipPath :id="`${id}-pig`"><rect x="220" y="130" width="650" height="460" /></clipPath>
    <clipPath :id="`${id}-name`"><rect x="875" y="190" width="1170" height="380" /></clipPath>
@@ -18,6 +19,6 @@ const id = useId()
    </filter>
   </defs>
   <image class="brand-pig" :href="horizontalLogo" width="2172" height="724" :clip-path="`url(#${id}-pig)`" />
-  <image :href="horizontalLogo" width="2172" height="724" :clip-path="`url(#${id}-name)`" :filter="`url(#${id}-rose)`" />
+  <image v-if="!mascotOnly" :href="horizontalLogo" width="2172" height="724" :clip-path="`url(#${id}-name)`" :filter="`url(#${id}-rose)`" />
  </svg>
 </template>

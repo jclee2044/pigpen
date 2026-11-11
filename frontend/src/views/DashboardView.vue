@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onBeforeUnmount, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { state,rows } from '../state/household'
 import { shell } from '../state/shell'
 import { summary,recent } from '../lib/selectors'
 import { money } from '../lib/money'
+import BudgetInsights from '../components/BudgetInsights.vue'
 import PurchaseRows from '../components/PurchaseRows.vue'
 import FitMoney from '../components/FitMoney.vue'
+const chatting = ref(false)
+// Home is already the active route while its chat panel is expanded.
+const stopHomeListener = useRouter().afterEach((to, from) => {
+  if (to.name === 'dashboard' && from.name === 'dashboard') chatting.value = false
+})
+onBeforeUnmount(stopHomeListener)
 const totals=computed(()=>summary(state.records,shell.month))
 const purchases=computed(()=>recent(rows('purchases').filter(x=>x.transaction_date.slice(0,7)===shell.month)).slice(0,5))
 const pendingPurchases=computed(()=>state.pending.filter(x=>x.operation.kind==='purchase.create'&&x.state!=='blocked'))
 </script>
 <template>
- <div class="page-heading"><h1>Dashboard</h1></div>
+ <div class="dashboard-intro" :class="{ drafting: !chatting }">
+ <div v-show="!chatting" class="page-heading"><h1>Dashboard</h1></div>
+ <BudgetInsights v-model:expanded="chatting" />
+ </div>
+ <template v-if="!chatting">
  <div class="metrics">
   <section class="card"><span class="metric-label">Budgeted</span><FitMoney class="metric-value" data-testid="allocated" :amount="totals.allocated" /></section>
   <section class="card"><span class="metric-label">Spent</span><FitMoney class="metric-value" data-testid="spent" :amount="totals.spent" /><small>Confirmed purchases</small></section>
@@ -26,4 +37,5 @@ const pendingPurchases=computed(()=>state.pending.filter(x=>x.operation.kind==='
  </section>
  <div class="section-heading"><h2>Recent purchases</h2><RouterLink to="/purchases">View all →</RouterLink></div>
  <section class="card"><PurchaseRows :purchases="purchases" @select="p=>$router.push('/purchases?detail='+p.id)" /></section>
+ </template>
 </template>

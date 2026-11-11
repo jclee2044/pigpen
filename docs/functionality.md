@@ -212,3 +212,7 @@ Confirmed receipt retention: scanned photos expire three calendar months after i
 ### Receipt review safeguard — November 9, 2026
 
 Receipt scanning prefills an editable purchase draft. Before saving a scanned draft, explicitly confirm that the amount, currency, date and details were checked against the source photo, including handwritten changes. Unclear totals require manual entry; line items can be incomplete. The existing three-calendar-month scanned-photo expiry and Keep indefinitely override remain in effect, and ordinary backup retention may retain older copies as approved.
+
+## Budget insights
+
+The Home dashboard shows spending highlights for its selected month using confirmed purchases and effective budget allocations. Household members can ask for allocation advice, compare months, or inspect matching purchases. OpenAI uses a shared server key. Questions and follow-ups stay in the current tab session and clear when the profile or budget month changes. Suggestions are advisory. Pending purchases participate after sync.

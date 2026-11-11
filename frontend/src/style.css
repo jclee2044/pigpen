@@ -35,7 +35,7 @@ input,select,textarea{min-width:0}
 }
 
 /* Share the primary action color and remove the logo artwork’s outer paper margin. */
-.wordmark .brand-logo{display:block;width:100%;height:auto;color:var(--rose);overflow:hidden}
+.wordmark .brand-logo{display:block;width:100%;height:auto;color:var(--brand-rose);overflow:hidden}
 .brand-pig{mix-blend-mode:darken}
 @media(max-width:760px){.app-header{padding-left:max(6px,env(safe-area-inset-left,0px))}}
 
@@ -125,3 +125,28 @@ main.loading-screen{display:flex;flex-direction:column;align-items:center;justif
 .button.icon-only{width:44px;height:44px;padding:10px;flex-shrink:0}
 
 @media(prefers-reduced-motion:no-preference){.household-chevron{transition:transform 200ms ease}.household-dropdown-enter-active{transition:opacity 200ms ease,transform 200ms cubic-bezier(.2,.8,.2,1)}.household-dropdown-leave-active{transition:opacity 150ms ease,transform 150ms ease;pointer-events:none}.household-dropdown-enter-from,.household-dropdown-leave-to{opacity:0;transform:translateY(-8px) scale(.98)}.household-dropdown{transform-origin:top right}}
+
+:root{--brand-rose:#a94665}
+.dashboard-intro{display:contents}
+html.chat-open,html.chat-open body,.chat-open #app{height:100%;min-height:0;overflow:clip;overscroll-behavior:none;background:var(--page)}
+.chat-open .refresh-host{min-height:100%;background:var(--page)}
+.refresh-host>.app-header{top:var(--chat-pan,0px)}
+.chat-open .refresh-host.app-entered>.refresh-content{position:fixed;inset:var(--chat-pan,0px) 0 auto;height:var(--chat-height,100%);min-height:0;display:flex;flex-direction:column;transform:none;overflow:clip;transition:none}
+.chat-open main{display:flex;flex-direction:column;min-height:0;flex:1;padding-block:4px 0;overflow:clip}
+.advisor-keyboard .dashboard-intro.drafting{height:100%;flex:none;min-height:0;display:flex;flex-direction:column}
+.advisor-keyboard .drafting .page-heading{margin-bottom:4px}
+.advisor-keyboard .drafting .advisor{display:flex;flex-direction:column;min-height:0;margin-block:auto 0}
+.advisor-keyboard .advisor-summary{min-height:0;overflow:auto;overscroll-behavior:contain}
+.advisor-keyboard .drafting footer{flex:none}
+.chat-open .pig-chat footer{padding-bottom:8px}
+@media(max-width:760px){
+  .advisor-awaiting-keyboard .mobile-nav,.advisor-keyboard .mobile-nav{visibility:hidden}
+}
+@media(prefers-reduced-motion:no-preference){
+  .chat-open:is(.advisor-keyboard,:has(#advisor-question:focus)) .refresh-host.app-entered>.refresh-content{transition:height 160ms cubic-bezier(.2,.75,.25,1)}
+}
+
+/* In chat, reveal the refresh indicator over the shared header while the
+   conversation and keyboard keep their established positions. */
+.chat-open .refresh-host>.app-header{transform:none}
+.chat-open .pull-refresh{top:calc(var(--safe-area-top) + var(--chat-pan,0px))}

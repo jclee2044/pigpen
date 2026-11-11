@@ -4,6 +4,7 @@ from uuid import UUID, uuid5, NAMESPACE_URL
 from sqlalchemy import select
 from .contracts import Operation, Model, AttachmentOperation, AttachmentDeleteOperation
 from pydantic import Field, AwareDatetime
+from .advisor import Advisor, Question
 from . import sync
 from .domain import month_bounds
 from .attachments import MAX_UPLOAD, store_image, attachment_path, image_metadata
@@ -21,6 +22,16 @@ class PushBatch(Model):
 def router(db):
     routes = APIRouter(prefix='/api/v1')
     service = Service(db)
+
+    advisor = Advisor(db)
+
+    @routes.get('/advisor/insights')
+    def advisor_insights(month: str):
+        return JSONResponse(advisor.insights(month), headers={'Cache-Control': 'no-store'})
+
+    @routes.post('/advisor/ask')
+    def advisor_question(question: Question):
+        return JSONResponse(advisor.ask(question), headers={'Cache-Control': 'no-store'})
 
     @routes.get('/runtime')
     def runtime():
