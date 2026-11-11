@@ -15,7 +15,8 @@ placeholders. Adapt them privately to the installation; do not commit local path
 private hostnames, credentials, or household financial records.
 
 The publication cleanup removed output artifacts from every retained branch and
-anonymized identifying text and commit author/committer metadata. Commit IDs changed.
+anonymized identifying content. Commit author and committer identities are retained
+as requested by the repository owner. Commit IDs changed.
 Old clones and copies must not be merged or pushed back into this history. Git's
 ignore rules prevent ordinary additions, but cannot identify personal information
 inside new screenshots, documents, or source files; review staged changes before
