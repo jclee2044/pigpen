@@ -23,7 +23,7 @@ const pendingPurchases=computed(()=>state.pending.filter(x=>x.operation.kind==='
  <div v-show="!chatting" class="page-heading"><h1>Dashboard</h1></div>
  <BudgetInsights v-model:expanded="chatting" />
  </div>
- <template v-if="!chatting">
+ <div v-if="!chatting" class="dashboard-details">
  <div class="metrics">
   <section class="card"><span class="metric-label">Budgeted</span><FitMoney class="metric-value" data-testid="allocated" :amount="totals.allocated" /></section>
   <section class="card"><span class="metric-label">Spent</span><FitMoney class="metric-value" data-testid="spent" :amount="totals.spent" /><small>Confirmed purchases</small></section>
@@ -37,5 +37,5 @@ const pendingPurchases=computed(()=>state.pending.filter(x=>x.operation.kind==='
  </section>
  <div class="section-heading"><h2>Recent purchases</h2><RouterLink to="/purchases">View all →</RouterLink></div>
  <section class="card"><PurchaseRows :purchases="purchases" @select="p=>$router.push('/purchases?detail='+p.id)" /></section>
- </template>
+ </div>
 </template>

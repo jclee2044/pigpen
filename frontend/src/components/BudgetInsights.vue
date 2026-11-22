@@ -25,15 +25,20 @@ onBeforeUnmount(() => motion?.cancel())
 
 const composing = ref(false)
 let followLatest = true
+let manualScroll = false
 function showLatest() {
   const log = transcript.value
   if (log) log.scrollTop = log.scrollHeight
 }
 function trackReadingPosition() {
   const log = transcript.value
-  if (log) followLatest = log.scrollHeight - log.scrollTop - log.clientHeight < 8
+  if (!log) return
+  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 8
+  if (atBottom || manualScroll) followLatest = atBottom
 }
 function focusComposer() {
+  clearTimeout(blurTimer)
+  manualScroll = false
   composing.value = true
   followLatest = true
   showLatest()
@@ -45,6 +50,52 @@ let restingHeight = window.innerHeight
 let keyboardVisible = false
 let savedScroll = 0
 let navTimer = 0
+let blurTimer = 0
+let draftScrollFrame = 0
+let draftScrollTarget = 0
+let draftScrollMain: HTMLElement | undefined
+function stopDraftScroll() {
+  cancelAnimationFrame(draftScrollFrame)
+  draftScrollFrame = 0
+  draftScrollMain?.removeEventListener('wheel', stopDraftScroll)
+  draftScrollMain?.removeEventListener('touchstart', stopDraftScroll)
+  draftScrollMain = undefined
+}
+function scrollDraft(main: HTMLElement, target: number) {
+  target = Math.max(0, Math.min(target, main.scrollHeight - main.clientHeight))
+  if (draftScrollMain === main && draftScrollFrame && Math.abs(target - draftScrollTarget) < 1) return
+  stopDraftScroll()
+  const start = main.scrollTop
+  if (Math.abs(target - start) < 1 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    main.scrollTop = target
+    return
+  }
+  draftScrollMain = main
+  draftScrollTarget = target
+  main.addEventListener('wheel', stopDraftScroll, { passive: true })
+  main.addEventListener('touchstart', stopDraftScroll, { passive: true })
+  const started = performance.now()
+  function step(now: number) {
+    const progress = Math.min(1, (now - started) / 260)
+    main.scrollTop = start + (target - start) * (1 - (1 - progress) ** 3)
+    if (progress < 1) draftScrollFrame = requestAnimationFrame(step)
+    else stopDraftScroll()
+  }
+  draftScrollFrame = requestAnimationFrame(step)
+}
+function blurComposer() {
+  composing.value = false
+  clearTimeout(navTimer)
+  root.classList.remove('advisor-awaiting-keyboard')
+  clearTimeout(blurTimer)
+  // Keyboard dismissal may end without a final visualViewport event in Safari.
+  // Keep its closing frames, but never leave an unfocused composer locking Home.
+  blurTimer = window.setTimeout(() => {
+    if (composing.value) return
+    keyboardVisible = false
+    layout()
+  }, 500)
+}
 function rememberViewport() {
   if (!keyboardVisible && !composing.value) restingHeight = viewport?.height ?? window.innerHeight
 }
@@ -91,21 +142,33 @@ function layout() {
   }
   const pan = Math.max(0, viewport?.offsetTop ?? 0)
   const lostHeight = restingHeight - visible
+  keyboardVisible = (composing.value || keyboardVisible) &&
+    (lostHeight > 65 || (composing.value && pan > 64))
   const editing = composing.value || keyboardVisible
-  keyboardVisible = editing && (lostHeight > (keyboardVisible ? 2 : 65) || pan > 64)
   const locked = expanded.value || keyboardVisible
   const wasLocked = root.classList.contains('chat-open')
+  const drafting = keyboardVisible && !expanded.value
+  const wasDrafting = root.classList.contains('advisor-drafting')
+  const previousPan = parseFloat(root.style.getPropertyValue('--chat-pan')) || 0
+  const cardTop = drafting && !wasDrafting ? frame.value?.getBoundingClientRect().top : undefined
   if (locked && !wasLocked) savedScroll = window.scrollY
   const dashboardBottom = !wasLocked && keyboardVisible && !expanded.value
     ? frame.value?.getBoundingClientRect().bottom : undefined
   root.classList.toggle('advisor-keyboard', keyboardVisible)
+  root.classList.toggle('advisor-drafting', drafting)
   root.classList.toggle('chat-open', locked)
+  if (wasDrafting && !drafting) {
+    // Cancel any in-flight dashboard scroll before the expanded transcript
+    // takes over this container, or before document scrolling is restored.
+    stopDraftScroll()
+    frame.value?.closest('main')?.scrollTo({ top: 0, behavior: 'instant' })
+  }
   if (keyboardVisible) root.classList.remove('advisor-awaiting-keyboard')
   if (editing && pan) root.style.setProperty('--chat-pan', pan + 'px')
   else root.style.removeProperty('--chat-pan')
   if (!locked) {
     root.style.removeProperty('--chat-height')
-    if (wasLocked && savedScroll) window.scrollTo(0, savedScroll)
+    if (wasLocked) window.scrollTo(0, savedScroll)
     return
   }
   const nav = document.querySelector<HTMLElement>('.mobile-nav')
@@ -117,8 +180,41 @@ function layout() {
     frame.value?.getBoundingClientRect()
   }
   root.style.setProperty('--chat-height', height + 'px')
+  if (drafting && frame.value) {
+    const main = frame.value.closest('main')
+    if (main) {
+      if (cardTop !== undefined) {
+        // Rebase document scrolling into the keyboard's scroll area without
+        // moving the card on the first frame. Then reveal it from that position.
+        main.scrollTop += frame.value.getBoundingClientRect().top - pan - (cardTop - previousPan)
+      }
+      const card = frame.value.getBoundingClientRect()
+      const headerHeight = document.querySelector<HTMLElement>('.app-header')?.offsetHeight ?? 0
+      const relativeTop = card.top - main.getBoundingClientRect().top
+      const cardGap = 16
+      const available = visible - headerHeight - cardGap
+      // Align the complete card just below the header when it fits. On very
+      // short screens keep the input reachable without compressing the card.
+      const target = card.height <= available
+        ? main.scrollTop + relativeTop - cardGap
+        : Math.max(main.scrollTop, main.scrollTop + relativeTop + card.height - (visible - headerHeight))
+      scrollDraft(main, target)
+    }
+  }
 }
-watch([expanded, composing], layout, { flush: 'post' })
+watch([expanded, composing], ([open], [wasOpen]) => {
+  if (wasOpen && !open) {
+    // Dismissal ends this editing session. Safari may never restore the exact
+    // pre-keyboard height, so its latched keyboard state must not lock Home.
+    frame.value?.querySelector('input')?.blur()
+    composing.value = false
+    keyboardVisible = false
+    clearTimeout(blurTimer)
+    clearTimeout(navTimer)
+    root.classList.remove('advisor-awaiting-keyboard')
+  }
+  layout()
+}, { flush: 'post' })
 onMounted(() => {
   viewport?.addEventListener('resize', layout)
   viewport?.addEventListener('scroll', layout)
@@ -129,7 +225,9 @@ onBeforeUnmount(() => {
   viewport?.removeEventListener('scroll', layout)
   window.removeEventListener('resize', layout)
   clearTimeout(navTimer)
-  root.classList.remove('chat-open', 'advisor-keyboard', 'advisor-awaiting-keyboard')
+  clearTimeout(blurTimer)
+  stopDraftScroll()
+  root.classList.remove('chat-open', 'advisor-keyboard', 'advisor-drafting', 'advisor-awaiting-keyboard')
   root.style.removeProperty('--chat-pan')
   root.style.removeProperty('--chat-height')
 })
@@ -205,6 +303,7 @@ watch([() => shell.month, () => state.online, () => state.lastSync, () => state.
 }, { immediate: true })
 async function send(question: string) {
   if (!question.trim() || thinking.value || !available.value) return
+  manualScroll = false
   followLatest = true
   void showChat(true, true)
   pendingQuestion.value = question.trim()
@@ -217,9 +316,9 @@ async function send(question: string) {
 </script>
 
 <template>
-  <section ref="frame" class="card advisor" :class="{ 'pig-chat': expanded }" :aria-label="expanded ? 'Chat with Sir Pennington' : 'Ask Sir Pennington'" :data-defer-app-update="expanded || undefined" @click="tapFrame" @keydown.esc="showChat(false)">
+  <section ref="frame" class="card advisor" :class="{ 'pig-chat': expanded }" :aria-label="expanded ? 'Chat with Sir Pennysworth' : 'Ask Sir Pennysworth'" :data-defer-app-update="expanded || undefined" @click="tapFrame" @keydown.esc="showChat(false)">
    <div v-if="!expanded" class="advisor-summary" :data-touch-interactive="composing || undefined">
-    <header><img :src="pigFace" alt="" class="pig"><div><h2 id="advisor-title" tabindex="-1"><button class="open-card" @click="showChat(true)">Ask Sir Pennington</button></h2><small>{{ monthLabel(shell.month) }}</small></div></header>
+    <header><img :src="pigFace" alt="" class="pig"><div><h2 id="advisor-title" tabindex="-1"><button class="open-card" @click="showChat(true)">Ask Sir Pennysworth</button></h2><small>{{ monthLabel(shell.month) }}</small></div></header>
     <ul v-if="insights"><li v-for="line in insights.insights.slice(0, 2)" :key="line">{{ line }}</li></ul>
     <p v-if="!state.online" role="status">Reconnect to refresh insights or ask a question.</p>
     <p v-else-if="loadError" role="status">Insights couldn’t load. <button class="button small" @click="retry++">Retry</button></p>
@@ -232,14 +331,14 @@ async function send(question: string) {
     </template>
    </div>
    <template v-else>
-      <header class="chat-header"><img :src="pigFace" alt="" class="pig"><div><h2>Sir Pennington</h2><small>{{ monthLabel(shell.month) }}</small></div><button class="icon-button" data-touch-interactive aria-label="Close chat" @click="showChat(false)"><AppIcon name="close" /></button></header>
-      <div ref="transcript" class="transcript" data-touch-interactive @scroll.passive="trackReadingPosition" role="log" aria-label="Conversation" aria-live="polite">
+      <header class="chat-header"><img :src="pigFace" alt="" class="pig"><div><h2>Sir Pennysworth</h2><small>{{ monthLabel(shell.month) }}</small></div><button class="icon-button" data-touch-interactive aria-label="Close chat" @click="showChat(false)"><AppIcon name="close" /></button></header>
+      <div ref="transcript" class="transcript" data-touch-interactive @wheel.passive="manualScroll = true" @touchstart.passive="manualScroll = true" @pointerdown="manualScroll = true" @scroll.passive="trackReadingPosition" role="log" aria-label="Conversation" aria-live="polite">
         <div class="received message">Hi! Let’s find a little more room in your budget.</div>
         <template v-for="(turn, index) in messages" :key="index">
           <div class="sent message">{{ turn.question }}</div>
           <div v-if="turn.reply" class="pig-reply"><img :src="pigFace" alt="" class="reply-pig"><div class="received message">{{ turn.reply.answer }}<nav aria-label="Supporting records"><RouterLink v-for="source in turn.reply.sources" :key="source.path" :to="source.path" @click="expanded = false">{{ source.label }}</RouterLink></nav></div></div>
         </template>
-        <div v-if="thinking" class="received message"><span class="typing" role="status" aria-label="Sir Pennington is typing"><i/><i/><i/></span></div>
+        <div v-if="thinking" class="received message"><span class="typing" role="status" aria-label="Sir Pennysworth is typing"><i/><i/><i/></span></div>
         <p v-if="questionError" class="notice error" role="alert">{{ questionError }}</p>
       </div>
    </template>
@@ -247,7 +346,7 @@ async function send(question: string) {
      <p v-if="expanded && !available" role="status">{{ state.online ? 'Chat is currently unavailable.' : 'Reconnect to send a message.' }}</p>
      <form @submit.prevent="send(draft)">
        <div class="composer">
-         <input id="advisor-question" v-model="draft" maxlength="1000" autocomplete="off" aria-label="Message Sir Pennington" placeholder="Message Sir Pennington…" @pointerdown="rememberViewport" @touchstart.passive="startTouch" @touchmove.passive="moveTouch" @touchcancel="touchOrigin = undefined" @touchend="endTouch" @focus="focusComposer" @blur="composing = false">
+         <input id="advisor-question" v-model="draft" maxlength="1000" autocomplete="off" aria-label="Message Sir Pennysworth" placeholder="Message Sir Pennysworth…" @pointerdown="rememberViewport" @touchstart.passive="startTouch" @touchmove.passive="moveTouch" @touchcancel="touchOrigin = undefined" @touchend="endTouch" @focus="focusComposer" @blur="blurComposer">
          <button class="button primary" data-touch-interactive :disabled="!available || thinking || !draft.trim()" :aria-label="expanded ? 'Send message' : 'Ask'" @pointerdown="event => { if (composing) event.preventDefault() }"><AppIcon v-if="expanded" name="arrow" /><template v-else>Ask</template></button>
        </div>
      </form>
@@ -262,11 +361,12 @@ async function send(question: string) {
 .pig{width:64px;height:54px;object-fit:contain;flex:none}
 .advisor h2,.chat-header h2{margin:0}
 .advisor ul{padding-left:20px;margin:12px 0;line-height:1.5;font-size:14px}
-.prompts{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.prompts{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 16px}
 .prompts .button{white-space:normal;text-align:left;border-radius:20px}
 form{margin:10px 0 0}.composer{display:flex;gap:8px;align-items:center}
 .composer input{font-size:16px;flex:1;min-width:0;border-radius:24px}.composer .button{border-radius:24px}
 .advisor label{font-size:13px;display:block;margin-bottom:6px}
+.advisor footer{position:relative;z-index:1;background:var(--paper);flex:none}
 .advisor.pig-chat{display:grid;grid-template-rows:auto minmax(0,1fr) auto;width:100%;flex:1;min-height:0;margin:0;overflow:clip;padding:0}
 .typing{display:inline-flex;align-items:center;gap:4px;height:16px}
 .typing i{width:6px;height:6px;border-radius:50%;background:var(--muted)}
