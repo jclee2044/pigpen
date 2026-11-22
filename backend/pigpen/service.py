@@ -8,6 +8,7 @@ from . import schema as s
 from .errors import DomainError
 from .records import now, get, expect, avatar_options
 from .budget import BudgetServices
+from .category_months import OTHER_CATEGORY_ID
 from .finance import FinanceServices
 from .approvals import ApprovalServices
 from .notifications import NotificationServices
@@ -35,6 +36,16 @@ class Service(ReceiptServices, BudgetServices, FinanceServices, ApprovalServices
             digest_op['data'].pop('allows_subcategories')
         elif op['kind'] == 'category.update' and op['data']['allows_subcategories'] is None:
             digest_op['data'].pop('allows_subcategories')
+        if op['kind'] == 'category.create':
+            if digest_op['data']['month'] is None:
+                digest_op['data'].pop('month')
+                digest_op['data'].pop('month_revision')
+        if op['kind'] in {'purchase.create', 'purchase.update'} and not digest_op['data']['category_explanation']:
+            digest_op['data'].pop('category_explanation')
+        if op['kind'] == 'receipt.confirm':
+            digest_op['data']['purchase'] = dict(digest_op['data']['purchase'])
+            if not digest_op['data']['purchase']['category_explanation']:
+                digest_op['data']['purchase'].pop('category_explanation')
         digest = sha256(json.dumps(digest_op, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         try:
             with self.db.transaction(write=True) as conn:
@@ -47,6 +58,8 @@ class Service(ReceiptServices, BudgetServices, FinanceServices, ApprovalServices
                     self.household(conn)
                 if op['kind'] not in {'household.initialize', 'user.create'} or op['actor_id']:
                     get(conn, s.users, op['actor_id'], active=True)
+                if op['kind'].split('.')[0] in {'income', 'savings'} and 'transaction_date' in op['data']:
+                    self.establish_month(conn, op['data']['transaction_date'][:7])
                 result = getattr(self, 'do_' + op['kind'].replace('.', '_'))(conn, op)
                 outcome = {'operation_id': op['operation_id'], 'result': result}
                 conn.execute(insert(s.operations).values(id=op['operation_id'], payload_hash=digest, outcome=outcome, created_at=now()))
@@ -92,6 +105,7 @@ class Service(ReceiptServices, BudgetServices, FinanceServices, ApprovalServices
         for name in ['Housing', 'Food', 'Gas', 'Dates', 'Savings', 'Phone', 'Car insurance', 'Subscriptions']:
             self.save(c, s.categories, dict(id=str(uuid5(NAMESPACE_URL, op['entity_id'] + '/' + name)), name=name,
                 kind='savings' if name == 'Savings' else 'expense', owner_id=None, parent_id=None, active=True, allows_subcategories=name=='Subscriptions'))
+        self.save(c, s.categories, dict(id=OTHER_CATEGORY_ID, name='Other', kind='expense', owner_id=None, parent_id=None, active=True, allows_subcategories=False))
         return record
 
     def validate_avatar(self, avatar):
@@ -106,6 +120,11 @@ class Service(ReceiptServices, BudgetServices, FinanceServices, ApprovalServices
         record = self.save(c, s.users, dict(id=op['entity_id'], **data, name_key=data['name'].casefold(), active=True, wishlist_order=[]))
         self.save(c, s.categories, dict(id=str(uuid5(NAMESPACE_URL, op['entity_id'] + '/personal')), name=data['name']+' Personal',
             kind='personal', owner_id=op['entity_id'], parent_id=None, active=True, allows_subcategories=True))
+        month = self.current_month(c)
+        monthly = self.month_state(c, month)
+        if monthly:
+            identifier = str(uuid5(NAMESPACE_URL, op['entity_id'] + '/personal'))
+            self.save(c, s.category_months, {'category_ids': [*monthly['category_ids'], identifier]}, dict(monthly))
         return record
 
     def do_user_update(self, c, op):
@@ -122,24 +141,37 @@ class Service(ReceiptServices, BudgetServices, FinanceServices, ApprovalServices
         return record
 
     def do_category_create(self, c, op):
-        data = op['data']
+        data = dict(op['data'])
+        month = data.pop('month')
+        month_revision = data.pop('month_revision')
+        if month is not None:
+            self.check_month_revision(c, month, month_revision)
+        month = month or self.current_month(c)
+        self.freeze_elapsed(c)
+        monthly = self.establish_month(c, month)
+        if data['name'].casefold() == 'other':
+            raise DomainError('category', 'Other is already available in purchase entry')
         if data['kind'] == 'savings':
             raise DomainError('category', 'Use the single shared Savings category')
         if data['kind'] == 'personal':
             if not data['parent_id'] or data['owner_id'] != op['actor_id']:
                 raise DomainError('category', 'Create Personal subcategories only under your Personal parent')
-            parent = get(c, s.categories, data['parent_id'], active=True)
+            parent = get(c, s.categories, data['parent_id'])
             if parent['kind'] != 'personal' or parent['parent_id'] or parent['owner_id'] != data['owner_id']:
                 raise DomainError('category', 'Invalid Personal parent or owner')
         elif data['owner_id']:
             raise DomainError('category', 'Shared categories cannot have an owner')
         elif data['parent_id']:
-            parent = get(c, s.categories, data['parent_id'], active=True)
+            parent = get(c, s.categories, data['parent_id'])
             if parent['kind'] != 'expense' or parent['parent_id'] or not parent['allows_subcategories']:
                 raise DomainError('category', 'Choose a shared parent that allows subcategories')
         if data['parent_id'] and data['allows_subcategories']:
             raise DomainError('category', 'Subcategories cannot contain subcategories')
-        return self.save(c, s.categories, dict(id=op['entity_id'], **data, active=True))
+        if data['parent_id'] and data['parent_id'] not in monthly['category_ids']:
+            raise DomainError('category', 'Add the parent category first')
+        category = self.save(c, s.categories, dict(id=op['entity_id'], **data, active=True))
+        self.save(c, s.category_months, {'category_ids': [*monthly['category_ids'], category['id']]}, monthly)
+        return category
 
     def do_category_reorder(self, c, op):
         row = self.household(c)
@@ -156,6 +188,10 @@ class Service(ReceiptServices, BudgetServices, FinanceServices, ApprovalServices
 
     def do_category_update(self, c, op):
         row = get(c, s.categories, op['entity_id']); data = dict(op['data']); expect(row, data.pop('expected_revision'))
+        if row['id'] == OTHER_CATEGORY_ID:
+            raise DomainError('category', 'Other is a system category')
+        if data['active'] != row['active']:
+            raise DomainError('update_required', 'Update PigPen to add or remove categories for a month.', 409)
         if row['kind'] == 'personal' and row['owner_id'] != op['actor_id']:
             raise DomainError('actor', 'Only the owner can edit a Personal category', 403)
         if row['kind'] == 'personal' and not row['parent_id'] and not data['active']:

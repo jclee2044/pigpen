@@ -1,3 +1,4 @@
+from test_category_months import include
 from datetime import datetime, timezone
 from uuid import uuid4
 from sqlalchemy import insert, select, text
@@ -45,12 +46,12 @@ def test_successful_device_is_not_resent_when_another_device_retries(client,user
     assert calls.count(one['id'])==1 and calls.count(two['id'])==2
 
 
-def test_profile_edit_does_not_unarchive_subcategories(client,users):
+def test_profile_edit_does_not_readd_removed_subcategories(client,users):
     actor=users[0]['id'];parent=next(x for x in client.get('/api/v1/categories').json()['items'] if x['owner_id']==actor)
     child=submit(client,'category.create',dict(name='Books',kind='personal',owner_id=actor,parent_id=parent['id']),actor)
-    submit(client,'category.update',dict(name='Books',active=False,expected_revision=1),actor,child['id'])
+    include(client,actor,child['id'],'2026-11',False)
     submit(client,'user.update',dict(name='Alex renamed',active=True,expected_revision=1),actor,actor)
-    assert client.get('/api/v1/records/categories/'+child['id']).json()['active'] is False
+    assert child['id'] not in next(x for x in client.get('/api/v1/sync/snapshot').json()['records']['category-months'] if x['month']=='2026-11')['category_ids']
 
 
 def test_shared_budget_alerts_are_deduplicated_and_targeted(client,users):

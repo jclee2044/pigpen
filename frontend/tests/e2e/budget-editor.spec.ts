@@ -1,3 +1,4 @@
+import {OTHER_CATEGORY_ID} from '../../src/lib/categoryMonths'
 import {test,expect} from '@playwright/test'
 import {seed,command} from './helpers'
 
@@ -32,9 +33,9 @@ test('budget editing formats currency, manages categories and charts allocations
  await page.getByRole('button',{name:'Edit',exact:true}).click()
  await page.getByLabel('Added from budget allocation',{exact:true}).focus()
  await page.keyboard.press('ArrowLeft')
- await page.getByRole('button',{name:'Delete Added from budget category',exact:true}).click()
- await page.getByRole('button',{name:'Delete category',exact:true}).click()
- await expect(page.getByLabel('Added from budget · Archived',{exact:true})).toBeDisabled()
+ await page.getByRole('button',{name:'Remove Added from budget category',exact:true}).click()
+ await page.getByRole('button',{name:'Remove',exact:true}).click()
+ await expect(page.getByLabel('Added from budget · Removed',{exact:true})).toBeDisabled()
  await page.getByRole('button',{name:'Save budget',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
  for(const width of [1440,390,320]){
@@ -91,7 +92,7 @@ test('category drag and keyboard order persist across household profiles',async(
  expect(final).not.toEqual(moved)
  await page.keyboard.press('Escape')
  await page.reload()
- await expect(page.locator('.budget-legend li').first()).toContainText(final[0]!.trim().replace(' · Archived',''))
+ await expect(page.locator('.budget-legend li').first()).toContainText(final[0]!.trim().replace(' · Removed',''))
  await seed(page,request,'Other order viewer')
  await page.goto('/budget');await page.getByRole('button',{name:'Edit',exact:true}).click()
  const other=await list.locator('.allocation-row label').allTextContents()
@@ -150,20 +151,20 @@ test('budget amount and percentage tabs convert without drift and persist both v
  await page.getByRole('button',{name:'Edit',exact:true}).click();await percentages.click();await expect(food).toHaveValue('20.00')
 })
 
-test('categories can be renamed and unarchived from the Budget page',async({page,request})=>{
+test('categories can be renamed, removed and added again from the Budget page',async({page,request})=>{
  const actor=await seed(page,request,'Category manager')
  const category=await command(request,'category.create',{name:'Archived groceries',kind:'expense'},actor.id)
- await command(request,'category.update',{name:category.name,active:false,expected_revision:category.revision},actor.id,category.id)
  await page.goto('/budget')
  await page.getByRole('button',{name:'Manage categories',exact:true}).click()
  await page.getByRole('button',{name:'Edit name of Archived groceries',exact:true}).click()
  await page.getByLabel('Category name',{exact:true}).fill('Weekly groceries')
  await page.getByRole('button',{name:'Save category',exact:true}).click()
  const row=page.locator('.category-row').filter({hasText:'Weekly groceries'})
- await expect(row).toContainText('Archived')
- await page.getByRole('button',{name:'Unarchive Weekly groceries',exact:true}).click()
- await expect(row).not.toContainText('Archived')
- await expect(row.getByRole('button',{name:'Unarchive Weekly groceries',exact:true})).toHaveCount(0)
+ await page.getByRole('button',{name:'Edit name of Weekly groceries',exact:true}).click()
+ await page.getByRole('button',{name:'Remove',exact:true}).click();await page.getByRole('button',{name:'Remove',exact:true}).click()
+ await expect(row).toHaveCount(0)
+ await page.getByRole('button',{name:'Add category',exact:true}).click();await page.getByLabel('Category name',{exact:true}).fill('Weekly groceries');await page.getByRole('button',{name:'Add Weekly groceries',exact:true}).click()
+ await expect(row).toHaveCount(1)
  for(const width of [320,390,1440]){
   await page.setViewportSize({width,height:844})
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
@@ -246,6 +247,7 @@ test('Personal stays last in budget lists and category dropdowns despite an olde
  const categories=[...snapshot.records.categories,child]
  const personalIds=categories.filter((c:{kind:string})=>c.kind==='personal').map((c:{id:string})=>c.id)
  async function expectPersonalLast(ids:string[]){
+  ids=ids.filter(id=>id!==OTHER_CATEGORY_ID)
   const first=ids.findIndex(id=>personalIds.includes(id))
   expect(first).toBeGreaterThanOrEqual(0)
   expect(ids.slice(first).every(id=>personalIds.includes(id))).toBe(true)
@@ -280,7 +282,7 @@ test('budget category swipe reveals delete and requires confirmation without los
  const amount=page.getByLabel(category.name,{exact:true})
  await amount.fill('123.45');await amount.blur()
  const row=page.getByLabel(category.name+' allocation',{exact:true})
- const remove=page.getByRole('button',{name:'Delete '+category.name+' category',exact:true})
+ const remove=page.getByRole('button',{name:'Remove '+category.name+' category',exact:true})
  await expect(remove).toBeHidden()
  await expect(page.locator('.delete-category')).toHaveCount(0)
  await row.scrollIntoViewIfNeeded()
@@ -294,8 +296,8 @@ test('budget category swipe reveals delete and requires confirmation without los
  await expect(page.getByRole('dialog')).toHaveAccessibleName('Edit budget')
  await page.screenshot({path:info.outputPath('swipe-delete.png')})
  await remove.click()
- await expect(page.getByRole('dialog')).toHaveAccessibleName('Delete category')
- await expect(page.getByText(/Past purchases and saved budgets keep their history/)).toBeVisible()
+ await expect(page.getByRole('dialog')).toHaveAccessibleName('Remove category?')
+ await expect(page.getByText(/Existing allocations and spending stay in the budget history/)).toBeVisible()
  await page.getByRole('button',{name:'Cancel',exact:true}).click()
  await expect(amount).toHaveValue('123.45')
  let snapshot=await(await request.get('/api/v1/sync/snapshot')).json()
@@ -303,11 +305,11 @@ test('budget category swipe reveals delete and requires confirmation without los
  // Keyboard reveal also works while the input keeps its normal cursor keys.
  await amount.focus();await page.keyboard.press('ArrowLeft');await expect(remove).toBeHidden()
  await row.focus();await page.keyboard.press('ArrowLeft');await expect(remove).toBeVisible()
- await remove.click();await page.getByRole('button',{name:'Delete category',exact:true}).click()
+ await remove.click();await page.getByRole('button',{name:'Remove',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveAccessibleName('Edit budget')
  await expect(amount).toHaveCount(0)
  snapshot=await(await request.get('/api/v1/sync/snapshot')).json()
- expect(snapshot.records.categories.find((c:{id:string})=>c.id===category.id).active).toBe(false)
+ expect(snapshot.records['category-months'].find((m:{month:string})=>m.month===new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}).slice(0,7)).category_ids).not.toContain(category.id)
  const personal=page.locator('.sortable-category').filter({hasText:'Personal'})
  await expect(personal.locator('.wish-delete')).toHaveCount(0)
  for(const width of [320,390,1440]){

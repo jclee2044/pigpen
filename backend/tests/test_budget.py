@@ -1,3 +1,4 @@
+from test_category_months import include
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from uuid import uuid4
@@ -59,11 +60,11 @@ def test_purchase_optimistic_revision(client,users):
     assert response.json()['error']['details']['revision']==2
 
 
-def test_edit_plan_retains_archived_allocation_without_allowing_new_inactive_money(client,users):
+def test_edit_plan_retains_removed_allocation_without_allowing_new_inactive_money(client,users):
     actor=users[0]['id']
     category=food(client)
     budget=submit(client,'budget.set',dict(month='2026-11',allocations=[dict(category_id=category['id'],amount_minor=5000)]),actor)
-    submit(client,'category.update',dict(name=category['name'],active=False,expected_revision=category['revision']),actor,category['id'])
+    include(client,actor,category['id'],'2026-11',False)
     data=dict(month='2026-11',expected_revision=budget['revision'],expected_income_minor=100000,
               allocations=[dict(category_id=category['id'],amount_minor=5000)])
     revised=submit(client,'budget.set',data,actor,budget['id'])
@@ -76,29 +77,29 @@ def test_edit_plan_retains_archived_allocation_without_allowing_new_inactive_mon
 
 def test_unsaved_month_inherits_latest_plan_without_copy_or_writes(client, users):
     actor=users[0]['id']; category=food(client)
-    plan=submit(client,'budget.set',dict(month='2026-01',expected_income_minor=100000,
+    plan=submit(client,'budget.set',dict(month='2046-01',expected_income_minor=100000,
         allocations=[dict(category_id=category['id'],amount_minor=20000)]),actor)
     submit(client,'purchase.create',dict(item='January food',amount_minor=1000,
-        category_id=category['id'],transaction_date='2026-01-02'),actor)
-    later=client.get('/api/v1/budget-months/2026-04').json()
+        category_id=category['id'],transaction_date='2046-01-02'),actor)
+    later=client.get('/api/v1/budget-months/2046-04').json()
     assert later['budget'] is None
     assert later['allocated_minor']==20000 and later['spent_minor']==0
     assert later['planned_unallocated_minor']==80000
-    assert client.get('/api/v1/budget-months/2025-12').json()['allocated_minor']==0
-    override=submit(client,'budget.set',dict(month='2026-04',expected_income_minor=120000,allocations=[]),actor)
-    assert client.get('/api/v1/budget-months/2026-05').json()['allocated_minor']==0
-    assert client.get('/api/v1/budget-months/2026-05').json()['planned_unallocated_minor']==120000
-    assert client.get('/api/v1/budget-months/2026-03').json()['allocated_minor']==20000
-    assert client.get('/api/v1/budget-months/2026-01').json()['budget']['id']==plan['id']
-    assert client.get('/api/v1/budget-months/2026-04').json()['budget']['id']==override['id']
+    assert client.get('/api/v1/budget-months/2045-12').json()['allocated_minor']==0
+    override=submit(client,'budget.set',dict(month='2046-04',expected_income_minor=120000,allocations=[]),actor)
+    assert client.get('/api/v1/budget-months/2046-05').json()['allocated_minor']==0
+    assert client.get('/api/v1/budget-months/2046-05').json()['planned_unallocated_minor']==120000
+    assert client.get('/api/v1/budget-months/2046-03').json()['allocated_minor']==20000
+    assert client.get('/api/v1/budget-months/2046-01').json()['budget']['id']==plan['id']
+    assert client.get('/api/v1/budget-months/2046-04').json()['budget']['id']==override['id']
 
 
-def test_inherited_allocations_exclude_archived_categories(client, users):
+def test_inherited_allocations_exclude_removed_categories(client, users):
     actor=users[0]['id']; category=food(client)
-    submit(client,'budget.set',dict(month='2026-01',allocations=[dict(category_id=category['id'],amount_minor=20000)]),actor)
-    submit(client,'category.update',dict(name=category['name'],active=False,expected_revision=category['revision']),actor,category['id'])
-    assert client.get('/api/v1/budget-months/2026-03').json()['allocated_minor']==0
-    assert client.get('/api/v1/budget-months/2026-01').json()['allocated_minor']==20000
+    submit(client,'budget.set',dict(month='2046-01',allocations=[dict(category_id=category['id'],amount_minor=20000)]),actor)
+    include(client,actor,category['id'],'2046-02',False)
+    assert client.get('/api/v1/budget-months/2046-03').json()['allocated_minor']==0
+    assert client.get('/api/v1/budget-months/2046-01').json()['allocated_minor']==20000
 
 
 def test_allocation_percentages_persist_and_follow_income(client, users):

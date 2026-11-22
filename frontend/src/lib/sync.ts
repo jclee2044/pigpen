@@ -1,7 +1,7 @@
 import type { ChangePage,Snapshot,Records } from '../api/models'
 import { emptyRecords } from '../api/models'
 export function applyPage(snapshot:Snapshot,page:ChangePage):Snapshot{
- const records:Records=JSON.parse(JSON.stringify(snapshot.records))
+ const records:Records={...emptyRecords(),...JSON.parse(JSON.stringify(snapshot.records))}
  let cursor=snapshot.cursor
  for(const change of page.changes){
   if(!(change.resource in emptyRecords())||!Number.isSafeInteger(change.cursor)||change.cursor<=cursor||typeof change.record.id!=='string'||!Number.isSafeInteger(change.record.revision))throw new Error('Could not safely read the latest changes. Update PigPen before syncing again.')

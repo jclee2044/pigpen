@@ -1,0 +1,87 @@
+import {test,expect,type Page,type APIRequestContext} from '@playwright/test'
+import {seed,command} from './helpers'
+import type {Snapshot} from '../../src/api/models'
+import {OTHER_CATEGORY_ID} from '../../src/lib/categoryMonths'
+async function snapshot(request:APIRequestContext){return await(await request.get('/api/v1/sync/snapshot')).json() as Snapshot}
+async function include(request:APIRequestContext,actor:string,id:string,month:string,included:boolean){const state=(await snapshot(request)).records['category-months'].find(x=>x.month===month);return command(request,'category.include',{month,included,expected_revision:state?.revision??0},actor,id)}
+async function manual(page:Page){await page.goto('/purchases');await page.getByRole('button',{name:'New purchase',exact:true}).click();await page.getByRole('button',{name:'Enter manually',exact:true}).click()}
+test('monthly management removes clutter, preserves allocations and reuses an existing category',async({page,request},info)=>{
+ const actor=await seed(page,request,'Monthly management')
+ const category=await command(request,'category.create',{name:'Monthly renovation',month:'2050-01'},actor.id)
+ await command(request,'budget.set',{month:'2050-01',expected_income_minor:10000,allocations:[{category_id:category.id,amount_minor:3000}]},actor.id)
+ await command(request,'purchase.create',{item:'Renovation history',amount_minor:1250,category_id:category.id,transaction_date:'2050-01-10'},actor.id)
+ await page.goto('/budget');await page.getByLabel('Budget month').fill('2050-02')
+ await page.getByRole('button',{name:'Manage categories',exact:true}).click()
+ await page.getByRole('button',{name:'Edit name of Monthly renovation',exact:true}).click()
+ await page.getByRole('button',{name:'Remove',exact:true}).click()
+ await page.getByRole('button',{name:'Cancel',exact:true}).click()
+ await expect(page.getByLabel('Category name',{exact:true})).toHaveValue('Monthly renovation')
+ await page.getByRole('button',{name:'Remove',exact:true}).click();await page.getByRole('button',{name:'Remove',exact:true}).click()
+ await expect(page.locator('.category-row').filter({hasText:'Monthly renovation'})).toHaveCount(0)
+ await expect(page.getByRole('dialog')).not.toContainText('Archived')
+ await page.getByRole('button',{name:'Add category',exact:true}).click();await page.getByLabel('Category name',{exact:true}).fill('Monthly renovation')
+ await page.getByRole('button',{name:'Add Monthly renovation',exact:true}).click()
+ await expect(page.locator('.category-row').filter({hasText:'Monthly renovation'})).toHaveCount(1)
+ const state=await snapshot(request)
+ expect(state.records.categories.filter(c=>c.name==='Monthly renovation')).toHaveLength(1)
+ expect(state.records['category-months'].find(x=>x.month==='2050-01')?.category_ids).toContain(category.id)
+ const history=await(await request.get('/api/v1/budget-months/2050-01')).json()
+ expect(history.allocated_minor).toBe(3000);expect(history.spent_minor).toBe(1250)
+ for(const width of [320,390,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)}
+ await page.screenshot({path:info.outputPath('monthly-management.png')})
+})
+test('purchase dates select monthly choices; Other is last and requires a separate explanation',async({page,request},info)=>{
+ const actor=await seed(page,request,'Monthly purchase')
+ const category=await command(request,'category.create',{name:'Seasonal project',month:'2051-01'},actor.id)
+ await include(request,actor.id,category.id,'2051-02',false)
+ await manual(page)
+ const dialog=page.getByRole('dialog');const select=dialog.getByRole('combobox',{name:'Category',exact:true})
+ await dialog.getByLabel('Item or service').fill('Permit for project');await dialog.getByLabel('Amount ($)',{exact:true}).fill('7.25')
+ await dialog.getByLabel('Transaction date',{exact:true}).fill('2051-01-10')
+ await select.selectOption(category.id)
+ await dialog.getByLabel('Transaction date',{exact:true}).fill('2051-02-10')
+ await expect(dialog.getByText('This category is not available for 2051-02. Choose another category or add it.',{exact:true})).toBeVisible()
+ await expect(select.locator('option').last()).toHaveText('Other')
+ await select.selectOption(OTHER_CATEGORY_ID)
+ await expect(dialog.getByLabel('Please explain')).toBeVisible()
+ await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toBeVisible()
+ await dialog.getByLabel('Please explain').fill('   ');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('Please explain')
+ await dialog.getByLabel('Please explain').fill('One-time permit');await dialog.getByLabel('Description',{exact:true}).fill('Keep these original notes')
+ for(const width of [320,390,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)}
+ await page.screenshot({path:info.outputPath('other-explanation.png')})
+ await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toHaveCount(0)
+ const purchase=(await snapshot(request)).records.purchases.find(x=>x.item==='Permit for project')!
+ expect(purchase.category_id).toBe(OTHER_CATEGORY_ID);expect(purchase.category_explanation).toBe('One-time permit');expect(purchase.description).toBe('Keep these original notes')
+ await page.goto('/purchases?detail='+purchase.id);await expect(page.getByRole('dialog')).toContainText('One-time permit')
+ await page.getByRole('button',{name:'Edit purchase',exact:true}).click();await expect(page.getByLabel('Please explain')).toHaveValue('One-time permit')
+ await page.getByRole('dialog').getByRole('combobox',{name:'Category',exact:true}).selectOption({label:'Food'});await expect(page.getByLabel('Please explain')).toHaveCount(0)
+})
+test('offline removal conflict preserves purchase and explicitly re-adds before one retry',async({page,context,request})=>{
+ const actor=await seed(page,request,'Monthly offline')
+ const category=await command(request,'category.create',{name:'Offline project',month:'2052-01'},actor.id)
+ await manual(page);const dialog=page.getByRole('dialog')
+ await dialog.getByLabel('Item or service').fill('Retained offline purchase');await dialog.getByLabel('Amount ($)',{exact:true}).fill('2.50');await dialog.getByLabel('Transaction date',{exact:true}).fill('2052-01-10');await dialog.getByRole('combobox',{name:'Category',exact:true}).selectOption(category.id)
+ await context.setOffline(true);await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toHaveCount(0)
+ await include(request,actor.id,category.id,'2052-01',false)
+ await context.setOffline(false);await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
+ await expect(page.getByRole('button',{name:'Add category and retry purchase',exact:true})).toBeVisible()
+ expect((await snapshot(request)).records.purchases.filter(p=>p.item==='Retained offline purchase')).toHaveLength(0)
+ await page.getByRole('button',{name:'Add category and retry purchase',exact:true}).click()
+ await expect(page.getByRole('button',{name:'Add category and retry purchase',exact:true})).toHaveCount(0)
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
+ await expect.poll(async()=>(await snapshot(request)).records.purchases.filter(p=>p.item==='Retained offline purchase').length).toBe(1)
+ const p=(await snapshot(request)).records.purchases.find(p=>p.item==='Retained offline purchase')!
+ expect(p.purchaser_id).toBe(actor.id);expect(p.transaction_date).toBe('2052-01-10')
+})
+
+test('approved subcategory proposals keep the established parent selection behavior',async({page,request})=>{
+ const actor=await seed(page,request,'Monthly approval')
+ const parent=await command(request,'category.create',{name:'Approved shared parent',allows_subcategories:true},actor.id)
+ const child=await command(request,'category.create',{name:'Approved child',parent_id:parent.id},actor.id)
+ const proposal=await command(request,'request.create',{item:'Monthly approved item',amount_minor:300,category_id:child.id},actor.id)
+ for(const reviewer of (await snapshot(request)).records.users.filter(u=>u.active&&u.id!==actor.id))await command(request,'vote.set',{request_id:proposal.id,request_revision:proposal.revision,approved:true},reviewer.id)
+ await page.goto('/approvals');await page.getByRole('article',{name:'Monthly approved item',exact:true}).getByRole('button',{name:'Record approved purchase',exact:true}).click()
+ await expect(page.getByRole('dialog').getByRole('combobox',{name:'Category',exact:true})).toHaveValue(parent.id)
+ await page.getByRole('dialog').getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0)
+ expect((await snapshot(request)).records.purchases.find(p=>p.request_id===proposal.id)?.category_id).toBe(parent.id)
+})

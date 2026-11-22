@@ -40,7 +40,32 @@ class UserUpdate(UserCreate):
     active: StrictBool = True
 
 
+class MonthSelection(Model):
+    month: str
+
+    @field_validator('month')
+    @classmethod
+    def valid_month(cls, value):
+        month_bounds(value)
+        return value
+
+
+class CategoryInclude(MonthSelection):
+    included: StrictBool
+    expected_revision: Annotated[StrictInt, Field(ge=0)]
+
+
 class CategoryCreate(Model):
+    month: str | None = None
+    month_revision: Annotated[StrictInt, Field(ge=0)] = 0
+
+    @field_validator('month')
+    @classmethod
+    def valid_month(cls, value):
+        if value is not None:
+            month_bounds(value)
+        return value
+
     name: Text
     kind: Literal['expense', 'personal', 'savings'] = 'expense'
     owner_id: UUID | None = None
@@ -61,7 +86,7 @@ class CategoryReorder(Model):
 
 
 PAYLOADS = {'household.initialize': HouseholdInit, 'user.create': UserCreate, 'user.update': UserUpdate,
-            'category.create': CategoryCreate, 'category.update': CategoryUpdate, 'category.reorder': CategoryReorder}
+            'category.include': CategoryInclude, 'category.create': CategoryCreate, 'category.update': CategoryUpdate, 'category.reorder': CategoryReorder}
 
 
 class Envelope(Model):
@@ -104,6 +129,7 @@ class BudgetSet(Model):
 
 
 class PurchaseCreate(Model):
+    category_explanation: Description = ''
     item: Text
     amount_minor: PositiveMoney
     category_id: UUID

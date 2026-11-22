@@ -49,11 +49,19 @@ export interface BudgetSet {
 }
 
 export interface CategoryCreate {
+  "month"?: string | null
+  "month_revision"?: number
   "name": string
   "kind"?: "expense" | "personal" | "savings"
   "owner_id"?: string | null
   "parent_id"?: string | null
   "allows_subcategories"?: boolean
+}
+
+export interface CategoryInclude {
+  "month": string
+  "included": boolean
+  "expected_revision": number
 }
 
 export interface CategoryReorder {
@@ -104,6 +112,7 @@ export interface InstallationSelect {
 export type Model = Record<string, never>
 
 export interface PurchaseCreate {
+  "category_explanation"?: string
   "item": string
   "amount_minor": number
   "category_id": string
@@ -115,6 +124,7 @@ export interface PurchaseCreate {
 }
 
 export interface PurchaseUpdate {
+  "category_explanation"?: string
   "item": string
   "amount_minor": number
   "category_id": string
@@ -259,6 +269,15 @@ export interface category_create {
   "client_time": string
   "kind": "category.create"
   "data": CategoryCreate
+}
+
+export interface category_include {
+  "operation_id": string
+  "entity_id": string
+  "actor_id"?: string | null
+  "client_time": string
+  "kind": "category.include"
+  "data": CategoryInclude
 }
 
 export interface category_reorder {
@@ -562,6 +581,7 @@ export interface Payloads {
   "household.initialize": HouseholdInit
   "user.create": UserCreate
   "user.update": UserUpdate
+  "category.include": CategoryInclude
   "category.create": CategoryCreate
   "category.update": CategoryUpdate
   "category.reorder": CategoryReorder

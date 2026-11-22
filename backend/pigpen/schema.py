@@ -1,4 +1,4 @@
-"""Explicit relational schema; JSON is limited to avatars, events and outcomes."""
+"""Explicit relational schema; JSON holds avatars, ordered IDs, frozen inherited plans, events and outcomes."""
 from sqlalchemy import (MetaData, Table, Column, String, Integer, Boolean, JSON,
                         ForeignKey, CheckConstraint, UniqueConstraint, Index)
 
@@ -72,9 +72,17 @@ allocations = Table('allocations', metadata, *record_columns(),
     Column('amount_minor', Integer, nullable=False), CheckConstraint('amount_minor >= 0'),
     Column('percentage_basis_points', Integer),
     UniqueConstraint('budget_month_id', 'category_id'))
+category_months = Table('category_months', metadata, *record_columns(),
+    Column('month', String, nullable=False, unique=True),
+    Column('category_ids', JSON, nullable=False),
+    Column('inherited_allocations', JSON, nullable=False),
+    Column('inherited_income_minor', Integer, nullable=False))
+RESOURCES['category-months'] = category_months
+
 purchases = Table('purchases', metadata, *record_columns(),
     Column('purchaser_id', String, ForeignKey('users.id'), nullable=False),
     Column('category_id', String, ForeignKey('categories.id'), nullable=False),
+    Column('category_explanation', String, nullable=False, server_default=''),
     Column('item', String, nullable=False), Column('amount_minor', Integer, nullable=False),
     Column('transaction_date', String, nullable=False), Column('merchant', String), Column('description', String, nullable=False),
     Column('request_id', String, unique=True), Column('bill_id', String), Column('bill_due', String),

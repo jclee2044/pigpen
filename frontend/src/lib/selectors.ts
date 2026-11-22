@@ -1,9 +1,10 @@
 import type { Records,Request,Purchase } from '../api/models'
+import { monthPlan,OTHER_CATEGORY_ID } from './categoryMonths'
 import { orderCategories } from './categoryOrder'
 export function summary(records:Records,month:string){
  const budget=records['budget-months'].find(x=>x.month===month&&!x.deleted)
- const plan=budget??records['budget-months'].filter(x=>!x.deleted&&x.month<month).sort((a,b)=>b.month.localeCompare(a.month))[0]
- const allocations=records.allocations.filter(x=>!x.deleted&&x.budget_month_id===plan?.id&&(!!budget||records.categories.some(c=>c.id===x.category_id&&c.active&&!c.deleted)))
+ const plan=monthPlan(records,month)
+ const allocations=plan.allocations
  const purchases=records.purchases.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)===month)
  const categories=orderCategories(records.categories.filter(x=>!x.deleted),records.household[0]?.category_order)
  const savings=records.savings.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)===month&&x.kind!=='opening')
@@ -11,10 +12,10 @@ export function summary(records:Records,month:string){
  const rows=categories.filter(x=>!x.parent_id).map(category=>{
   const allocated=allocations.find(x=>x.category_id===category.id)?.amount_minor??0
   const actual=category.kind==='savings'?netSavings:purchases.filter(x=>x.category_id===category.id||categories.find(c=>c.id===x.category_id)?.parent_id===category.id).reduce((n,x)=>n+x.amount_minor,0)
-  return {...category,allocated,actual,remaining:allocated-actual}
- })
+  return {...category,active:plan.ids.has(category.id),allocated,actual,remaining:allocated-actual}
+ }).filter(x=>(x.active&&x.id!==OTHER_CATEGORY_ID)||x.allocated!==0||x.actual!==0)
  const allocated=rows.reduce((n,x)=>n+x.allocated,0),spent=purchases.reduce((n,x)=>n+x.amount_minor,0)
- return {budget,rows,allocated,spent,remaining:rows.reduce((n,x)=>n+x.remaining,0),expected:plan?.expected_income_minor??0,
+ return {budget,rows,allocated,spent,remaining:rows.reduce((n,x)=>n+x.remaining,0),expected:plan.expected,
   actualIncome:records.income.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)===month).reduce((n,x)=>n+x.amount_minor,0),
   savingsBalance:records.savings.filter(x=>!x.deleted&&x.transaction_date.slice(0,7)<=month).reduce((n,x)=>n+(x.kind==='withdrawal'?-x.amount_minor:x.amount_minor),0),netSavings}
 }

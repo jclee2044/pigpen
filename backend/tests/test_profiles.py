@@ -1,3 +1,4 @@
+from test_category_months import include
 from sqlalchemy import select, func, text
 from pigpen import schema as s
 from pigpen.database import Database, migrate
@@ -111,12 +112,13 @@ def test_shared_subcategories_validation_and_rollup(client, users):
     bad = operation('budget.set', dict(month='2026-12', expected_income_minor=10000,
         allocations=[dict(category_id=child['id'], amount_minor=1000)]), actor)
     assert client.post('/api/v1/operations', json=bad).status_code == 422
-    archived = submit(client, 'category.update', dict(name=child['name'], active=False, expected_revision=child['revision']), actor, child['id'])
-    assert not archived['active']
+    removed = include(client, actor, child['id'], '2026-11', False)
+    assert child['id'] not in removed['category_ids']
     assert client.post('/api/v1/operations', json=operation('category.update', dict(name=subscriptions['name'], active=True,
         expected_revision=subscriptions['revision'], allows_subcategories=False), actor, subscriptions['id'])).status_code == 422
-    parent = submit(client, 'category.update', dict(name=subscriptions['name'], active=False, expected_revision=subscriptions['revision']), actor, subscriptions['id'])
-    assert client.post('/api/v1/operations', json=operation('category.create', dict(name='Archived parent child', parent_id=parent['id']), actor)).status_code == 409
+    include(client, actor, subscriptions['id'], '2026-11', False)
+    parent = subscriptions
+    assert client.post('/api/v1/operations', json=operation('category.create', dict(name='Removed parent child', parent_id=parent['id'], month='2026-11', month_revision=next(x for x in client.get('/api/v1/sync/snapshot').json()['records']['category-months'] if x['month']=='2026-11')['revision']), actor)).status_code == 422
 
 
 def test_hierarchy_migration_preserves_references_and_publishes_changes(settings):
@@ -142,10 +144,10 @@ def test_hierarchy_migration_preserves_references_and_publishes_changes(settings
         assert c.execute(select(s.allocations.c.category_id)).scalar() == 'personal'
         assert any(row['name'] == 'Subscriptions' and row['allows_subcategories'] for row in categories.values())
         records = [row for row in c.execute(select(s.changes.c.record).where(s.changes.c.resource == 'categories')).scalars()]
-        assert {row['name'] for row in records} == {'personal', 'Subscriptions'}
+        assert {row['name'] for row in records} == {'personal', 'Subscriptions', 'Other'}
     migrate(settings)
     with Database(settings).transaction() as c:
-        assert c.execute(select(func.count()).select_from(s.categories)).scalar() == 3
+        assert c.execute(select(func.count()).select_from(s.categories)).scalar() == 4
 
 
 def test_legacy_category_retry_hash_is_preserved(client, users, settings):
@@ -165,6 +167,8 @@ def test_legacy_category_retry_hash_is_preserved(client, users, settings):
         from pigpen.contracts import Operation
         legacy = TypeAdapter(Operation).validate_python(command).model_dump(mode='json')
         legacy['data'].pop('allows_subcategories')
+        legacy['data'].pop('month', None)
+        legacy['data'].pop('month_revision', None)
         legacy_hash = sha256(json.dumps(legacy, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         with Database(settings).transaction(write=True) as c:
             c.execute(update(s.operations).where(s.operations.c.id == command['operation_id']).values(payload_hash=legacy_hash))

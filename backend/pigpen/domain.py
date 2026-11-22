@@ -37,10 +37,10 @@ def all_approved(requester_id, active_ids, votes, request_revision):
     return bool(eligible) and eligible <= approvals
 
 
-def budget_summary(month, categories, allocations, purchases, income=(), savings=(), expected_income=0):
+def budget_summary(month, categories, allocations, purchases, income=(), savings=(), expected_income=0, included=None):
     """Roll up Personal children exactly once; planned money is not actual income."""
     month_bounds(month)
-    allocation_map = {a['category_id']: a['amount_minor'] for a in allocations if not a['deleted']}
+    allocation_map = {a['category_id']: a['amount_minor'] for a in allocations if not a.get('deleted', False)}
     category_map = {c['id']: c for c in categories}
     spent = {}
     for purchase in purchases:
@@ -57,8 +57,12 @@ def budget_summary(month, categories, allocations, purchases, income=(), savings
             continue
         amount = allocation_map.get(category['id'], 0)
         actual = net_contributions if category['kind']=='savings' else spent.get(category['id'], 0)
+        if included is not None and category['id'] not in included and not amount and not actual:
+            continue
+        if category['id'] == '00000000-0000-5000-8000-000000000001' and not amount and not actual:
+            continue
         rows.append({'category_id': category['id'], 'name': category['name'], 'kind': category['kind'],
-                     'owner_id': category['owner_id'], 'active': category['active'],
+                     'owner_id': category['owner_id'], 'active': category['id'] in included if included is not None else category['active'],
                      'allocated_minor': amount, 'actual_minor': actual, 'remaining_minor': amount-actual})
     total_allocated = sum(x['allocated_minor'] for x in rows)
     return {'month': month, 'categories': rows, 'allocated_minor': total_allocated,

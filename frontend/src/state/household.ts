@@ -37,7 +37,7 @@ export async function refresh(replace=false){
 export async function boot(){
  try{
   const cache=await readMeta<Snapshot&{lastSync:string}>('cache')
-  if(cache){state.records=cache.records;state.lastSync=cache.lastSync;state.hasCache=true}
+  if(cache){state.records={...emptyRecords(),...cache.records};state.lastSync=cache.lastSync;state.hasCache=true}
   state.selectedId=await readMeta<string>('selected-profile')??''
   state.deviceId=await readMeta<string>('device')??crypto.randomUUID();await writeMeta('device',state.deviceId)
   state.pending=await readPending()
@@ -123,7 +123,7 @@ async function pullChanges(){
   try{page=await request<ChangePage>('/sync/pull?cursor='+cache.cursor+'&limit=100')}catch(error){if(error instanceof ApiError&&error.status===409&&error.code==='cursor'){await refresh(true);return}throw error}
   const next=applyPage(cache,page)
   cache=await commitCache({...next,lastSync:new Date().toISOString()})
-  state.records=cache.records;state.lastSync=cache.lastSync;state.online=true;state.hasCache=true
+  state.records={...emptyRecords(),...cache.records};state.lastSync=cache.lastSync;state.online=true;state.hasCache=true
   identifyServer()
   if(!page.has_more)return
  }

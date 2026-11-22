@@ -31,11 +31,14 @@ class FinanceServices:
         return self.delete_entry(c,op,s.savings_entries)
 
     def bill_category(self,c,category_id):
-        category=get(c,s.categories,category_id,active=True)
+        category=get(c,s.categories,category_id)
+        from .category_months import OTHER_CATEGORY_ID
+        if category['id'] == OTHER_CATEGORY_ID:
+            raise DomainError('category', 'Choose a specific category for bills and approval requests')
         if category['kind']=='savings':
             raise DomainError('category','Bills must use an expense or Personal category')
         if category['parent_id']:
-            get(c,s.categories,category['parent_id'],active=True)
+            get(c,s.categories,category['parent_id'])
 
     def do_bill_create(self,c,op):
         self.bill_category(c,op['data']['category_id'])
@@ -55,6 +58,9 @@ class FinanceServices:
         if previous:
             raise DomainError('already_paid','This bill occurrence is already linked to a purchase',409,dict(previous))
         self.bill_category(c,bill['category_id'])
+        if not data['purchase_id']:
+            self.require_month_category(c, bill['category_id'], data['transaction_date'][:7])
+            self.establish_month(c, data['transaction_date'][:7])
         if data['purchase_id']:
             purchase=get(c,s.purchases,data['purchase_id'])
             if purchase['bill_id'] or purchase['category_id']!=bill['category_id']:

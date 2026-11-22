@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref,watch } from 'vue'
-const props=defineProps<{id:string;name:string;enabled:boolean;open:boolean}>()
+const props=defineProps<{id:string;name:string;enabled:boolean;open:boolean;actionLabel?:string}>()
 const emit=defineEmits<{reveal:[string];delete:[]}>()
 const dragging=ref(false),offset=ref(0)
 let gesture:{x:number;y:number;start:number;horizontal:boolean}|undefined
@@ -48,7 +48,7 @@ function tapDelete(event:TouchEvent){
 </script>
 <template>
  <div class="wish-swipe" :class="{revealed:open,dragging,enabled}">
-  <button v-if="enabled" type="button" class="wish-delete" :tabindex="open?0:-1" :aria-hidden="!open" :aria-label="'Delete '+name" @touchstart.passive="startDelete" @touchend.prevent="tapDelete" @touchcancel="deleteTouch=undefined" @click="remove">Delete</button>
+  <button v-if="enabled" type="button" class="wish-delete" :tabindex="open?0:-1" :aria-hidden="!open" :aria-label="(actionLabel??'Delete')+' '+name" @touchstart.passive="startDelete" @touchend.prevent="tapDelete" @touchcancel="deleteTouch=undefined" @click="remove">{{actionLabel??'Delete'}}</button>
   <div class="wish-surface" :style="{transform:`translateX(${dragging?offset:open?-88:0}px)`}" @pointerdown="start" @pointermove="move" @pointerup="end" @pointercancel="cancel" @lostpointercapture.self="cancel" @click.capture="click" @keydown.esc="emit('reveal','')" @keydown.left="revealWithKeyboard"><slot /></div>
  </div>
 </template>

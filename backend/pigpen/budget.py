@@ -4,9 +4,10 @@ from . import schema as s
 from .records import get, expect
 from .errors import DomainError
 from .domain import budget_summary, month_bounds
+from .category_months import CategoryMonthServices
 
 
-class BudgetServices:
+class BudgetServices(CategoryMonthServices):
     def prior_plan(self, c, month):
         return c.execute(select(s.budget_months).where(
             s.budget_months.c.month < month, s.budget_months.c.deleted==False
@@ -15,22 +16,21 @@ class BudgetServices:
     def summary(self, c, month):
         month_bounds(month)
         budget = c.execute(select(s.budget_months).where(s.budget_months.c.month==month)).mappings().first()
-        plan = budget if budget else self.prior_plan(c, month)
-        allocations = list(c.execute(select(s.allocations).where(s.allocations.c.budget_month_id==plan['id'])).mappings()) if plan else []
-        if not budget:
-            active = set(c.execute(select(s.categories.c.id).where(s.categories.c.active==True, s.categories.c.deleted==False)).scalars())
-            allocations = [a for a in allocations if a['category_id'] in active]
+        included, allocations, expected_income = self.resolved_month(c, month)
         def rows(table):
             return list(c.execute(select(table)).mappings())
         result = budget_summary(month, rows(s.categories), allocations, rows(s.purchases),
                                 rows(s.income_entries),
                                 rows(s.savings_entries),
-                                plan['expected_income_minor'] if plan else 0)
+                                expected_income, included)
         result['budget'] = dict(budget) if budget else None
         return result
 
     def do_budget_set(self, c, op):
         data = op['data']; month=data['month']
+        self.freeze_elapsed(c)
+        monthly = self.establish_month(c, month)
+        included, frozen_allocations, _ = self.resolved_month(c, month)
         budget = c.execute(select(s.budget_months).where(s.budget_months.c.month==month)).mappings().first()
         if budget:
             budget=dict(budget)
@@ -45,22 +45,21 @@ class BudgetServices:
         if new_allocations is None and budget:
             new_allocations=[{'category_id':a['category_id'],'amount_minor':a['amount_minor']} for a in existing_allocations.values()]
         if new_allocations is None and not budget:
-            prior=self.prior_plan(c, month)
-            new_allocations=[]
-            if prior:
-                for row in c.execute(select(s.allocations).where(s.allocations.c.budget_month_id==prior['id'],s.allocations.c.deleted==False)).mappings():
-                    cat=get(c,s.categories,row['category_id'])
-                    if cat['active']:
-                        new_allocations.append({'category_id':row['category_id'],'amount_minor':row['amount_minor']})
+            new_allocations = list(frozen_allocations)
+        # Removed allocations remain unchanged, including with an older client.
+        retained = {a['category_id']: a for a in frozen_allocations if a['category_id'] not in included}
+        if new_allocations is not None:
+            supplied = {a['category_id'] for a in new_allocations}
+            new_allocations = [*new_allocations, *(a for key, a in retained.items() if key not in supplied)]
         if new_allocations is not None:
             identifiers=[a['category_id'] for a in new_allocations]
             if len(set(identifiers))!=len(identifiers):
                 raise DomainError('allocations','Duplicate category allocation')
             for a in new_allocations:
                 cat=get(c,s.categories,a['category_id'])
-                previous=existing_allocations.get(a['category_id'])
-                if not cat['active'] and (not previous or previous['amount_minor']!=a['amount_minor']):
-                    raise DomainError('allocations','Archived category allocations can only be retained unchanged')
+                previous=retained.get(a['category_id'])
+                if cat['id'] not in included and (not previous or previous['amount_minor']!=a['amount_minor']):
+                    raise DomainError('allocations','Add the category before changing its allocation')
                 if cat['parent_id']:
                     raise DomainError('allocations','Subcategories classify purchases; allocate to the parent')
             savings_ids=[a['category_id'] for a in new_allocations if get(c,s.categories,a['category_id'])['kind']=='savings']
@@ -77,15 +76,21 @@ class BudgetServices:
                         if data['expected_income_minor'] else None),deleted=False),current)
             for current in old.values():
                 self.save(c,s.allocations,{'deleted':True},current)
+        self.save(c, s.category_months, {}, monthly)
         return budget
 
     def purchase_values(self,c,op,current=None):
         data=dict(op['data']); data.pop('expected_revision',None)
-        cat=get(c,s.categories,data['category_id'],active=True)
-        if cat['kind']=='savings':
-            raise DomainError('category','Record savings as savings movements, not purchases')
-        if cat['parent_id']:
-            get(c,s.categories,cat['parent_id'],active=True)
+        month = data['transaction_date'][:7]
+        cat = self.require_month_category(c, data['category_id'], month, current)
+        from .category_months import OTHER_CATEGORY_ID
+        explanation = data.get('category_explanation', '').strip()
+        if cat['id'] == OTHER_CATEGORY_ID and not explanation:
+            raise DomainError('category_explanation', 'Please explain is required for Other')
+        if cat['id'] != OTHER_CATEGORY_ID and explanation:
+            raise DomainError('category_explanation', 'An explanation is only used with Other')
+        data['category_explanation'] = explanation
+        self.establish_month(c, month)
         request_revision=data.pop('request_revision',None)
         if data['request_id'] and not current:
             self.link_request(c, data['request_id'], request_revision, op)

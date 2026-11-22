@@ -216,3 +216,9 @@ Receipt scanning prefills an editable purchase draft. Before saving a scanned dr
 ## Budget insights
 
 The Home dashboard shows spending highlights for its selected month using confirmed purchases and effective budget allocations. Household members can ask for allocation advice, compare months, or inspect matching purchases. OpenAI uses a shared server key. Questions and follow-ups stay in the current tab session and clear when the profile or budget month changes. Suggestions are advisory. Pending purchases participate after sync.
+
+## Monthly category inclusion — November 22, 2026
+
+Confirmed: add or remove categories for the selected month; label the action **Remove**, without archive terminology or an archived-category screen. Preserve historical allocation/spending and cross-month analysis through shared category identities. Purchase entry offers the selected transaction month's categories, including when backdated. Its final option is **Other**, with a required **Please explain** field stored separately from the description. Existing purchases keep their category after removal.
+
+Implementation defaults: establish an independent setup when a month gains budget, category or financial activity; unestablished months preview the latest preceding setup. Freeze elapsed months before editing inheritance. Removal retains existing allocations/spending but omits that category's allocation from subsequent unestablished months. Re-adding reuses identity; name search offers existing matches without listing every removed category. Removing a parent also excludes its children from choices. Personal parents and Other are protected. Shared names/hierarchy/order are not historical snapshots. See [contract and migration details](monthly-categories.md).

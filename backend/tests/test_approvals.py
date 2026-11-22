@@ -152,6 +152,7 @@ def test_denial_migration_preserves_existing_requests_votes_and_replay(settings,
     def legacy_save(self,c,table,values,current=None):
         return original_save(self,c,table,{key:value for key,value in values.items() if key in table.c},current)
     with monkeypatch.context() as legacy:
+        legacy.setattr(Service, 'month_state', lambda *args: None)
         legacy.setattr(s,'households',legacy_households)
         legacy.setitem(s.RESOURCES,'household',legacy_households)
         legacy.setattr(s,'users',legacy_users)
@@ -224,6 +225,7 @@ def test_shared_wishlist_migration_preserves_prior_visible_order(settings,monkey
         return service.execute(TypeAdapter(Operation).validate_python(operation(kind,data,actor,entity)))['result']
     old_households=Table('households',MetaData(),autoload_with=db.engine)
     with monkeypatch.context() as old:
+        old.setattr(Service, 'month_state', lambda *args: None)
         old.setattr(s,'households',old_households)
         old.setitem(s.RESOURCES,'household',old_households)
         execute('household.initialize',dict(name='Existing household'))

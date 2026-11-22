@@ -1,3 +1,4 @@
+from test_category_months import include
 from uuid import uuid4
 from conftest import operation, submit
 
@@ -38,9 +39,9 @@ def test_incremental_cursor_tombstones_and_snapshot(client,users):
 def test_archived_actor_and_category_conflicts_keep_original_intent(client,users):
     actor=users[0]['id'];category=next(x for x in client.get('/api/v1/categories').json()['items'] if x['name']=='Food')
     queued=operation('purchase.create',dict(item='Queued',amount_minor=123,category_id=category['id'],transaction_date='2026-10-01'),actor)
-    submit(client,'category.update',dict(name='Food',active=False,expected_revision=1),users[1]['id'],category['id'])
+    include(client,users[1]['id'],category['id'],'2026-10',False)
     result=client.post('/api/v1/sync/push',json={'operations':[queued]}).json()['outcomes'][0]
-    assert not result['ok'] and result['error']['code']=='archived'
+    assert not result['ok'] and result['error']['code']=='category_unavailable'
     assert client.get('/api/v1/purchases').json()['items']==[]
 
 

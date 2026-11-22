@@ -6,7 +6,8 @@ export interface User extends Row { name: string; avatar: Required<Avatar>; acti
 export interface Category extends Row { name: string; kind: 'expense'|'personal'|'savings'; owner_id: string|null; parent_id: string|null; allows_subcategories?: boolean; active: boolean }
 export interface Budget extends Row { month: string; expected_income_minor: number }
 export interface Allocation extends Row { budget_month_id: string; category_id: string; amount_minor: number; percentage_basis_points?: number | null }
-export interface Purchase extends Row { purchaser_id: string; category_id: string; item: string; amount_minor: number; transaction_date: string; merchant: string|null; description: string; request_id: string|null; bill_id: string|null; bill_due: string|null }
+export interface CategoryMonth extends Row { month:string; category_ids:string[]; inherited_allocations:{category_id:string;amount_minor:number}[]; inherited_income_minor:number }
+export interface Purchase extends Row { category_explanation?:string; purchaser_id: string; category_id: string; item: string; amount_minor: number; transaction_date: string; merchant: string|null; description: string; request_id: string|null; bill_id: string|null; bill_due: string|null }
 export interface Income extends Row { user_id: string; amount_minor: number; transaction_date: string; description: string }
 export interface Savings extends Income { kind: 'opening'|'contribution'|'withdrawal' }
 export interface Bill extends Row { name: string; amount_minor: number; category_id: string; due_day: number; start_date: string; description: string; active: boolean }
@@ -17,9 +18,9 @@ export interface Vote extends Row { request_id: string; reviewer_id: string; app
 export interface Comment extends Row { actor_id: string; target_resource: 'wishlist-items'|'approval-requests'; target_id: string; text: string }
 export interface Note extends Row { recipient_id: string; kind: string; target_resource: string; target_id: string; read_at: string|null; message?: string }
 export interface Attachment extends Row { receipt_scan_id?:string|null; expires_at?:string|null; expired_at?:string|null; keep_indefinitely?:boolean; purchase_id: string; filename: string; media_type: string; byte_size: number; checksum: string }
-export interface Resources { household: Household; users: User; categories: Category; 'budget-months': Budget; allocations: Allocation; purchases: Purchase; income: Income; savings: Savings; 'recurring-bills': Bill; 'bill-occurrences': Row; 'wishlist-items': Wish; 'approval-requests': Request; 'approval-votes': Vote; comments: Comment; notifications: Note; attachments: Attachment }
+export interface Resources { household: Household; users: User; categories: Category; 'category-months':CategoryMonth; 'budget-months': Budget; allocations: Allocation; purchases: Purchase; income: Income; savings: Savings; 'recurring-bills': Bill; 'bill-occurrences': Row; 'wishlist-items': Wish; 'approval-requests': Request; 'approval-votes': Vote; comments: Comment; notifications: Note; attachments: Attachment }
 export type Records = { [K in keyof Resources]: Resources[K][] }
 export interface Snapshot { cursor: number; records: Records }
 export interface Change { cursor: number; resource: keyof Resources; record: Row }
 export interface ChangePage { changes: Change[]; next_cursor: number; has_more: boolean }
-export const emptyRecords = (): Records => ({ household:[],users:[],categories:[],'budget-months':[],allocations:[],purchases:[],income:[],savings:[],'recurring-bills':[],'bill-occurrences':[],'wishlist-items':[],'approval-requests':[],'approval-votes':[],comments:[],notifications:[],attachments:[] })
+export const emptyRecords = (): Records => ({ household:[],users:[],categories:[],'category-months':[],'budget-months':[],allocations:[],purchases:[],income:[],savings:[],'recurring-bills':[],'bill-occurrences':[],'wishlist-items':[],'approval-requests':[],'approval-votes':[],comments:[],notifications:[],attachments:[] })

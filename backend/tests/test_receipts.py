@@ -26,7 +26,7 @@ def ready(client,users,settings):
     return client.get('/api/v1/receipt-scans/'+r.json()['id']).json()
 
 def confirmation(client,users,row,**extra):
-    category=next(x for x in client.get('/api/v1/categories').json()['items'] if x['kind']=='expense')
+    category=next(x for x in client.get('/api/v1/categories').json()['items'] if x['name']=='Food')
     return operation('receipt.confirm',{'scan_id':row['id'],'expected_revision':row['revision'],'purchase':{
         'item':'Apples','amount_minor':350,'category_id':category['id'],'transaction_date':'2026-11-09','merchant':'MARKET','description':'Apples — $3.50'},**extra},users[0]['id'])
 
@@ -174,3 +174,19 @@ def test_ocr_unreadable_text_is_a_controlled_failure(monkeypatch, tmp_path):
     monkeypatch.setattr(receipt_worker.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0, stdout='{"error":"receipt_text"}'))
     with pytest.raises(RuntimeError):
         receipt_worker.extract(tmp_path / 'unused.jpg')
+
+
+def test_other_receipt_requires_explanation_and_preserves_it(client,users,settings):
+    from pigpen.category_months import OTHER_CATEGORY_ID
+    row=ready(client,users,settings)
+    op=confirmation(client,users,row)
+    op['data']['purchase']['category_id']=OTHER_CATEGORY_ID
+    invalid=client.post('/api/v1/operations',json=op)
+    assert invalid.status_code==422 and invalid.json()['error']['code']=='category_explanation'
+    assert client.get('/api/v1/receipt-scans/'+row['id']).json()['status']=='ready'
+    op['data']['purchase']['category_explanation']='A one-off permit'
+    saved=client.post('/api/v1/operations',json=op)
+    assert saved.status_code==200, saved.text
+    purchase=next(p for p in client.get('/api/v1/purchases').json()['items'] if p['category_id']==OTHER_CATEGORY_ID)
+    assert purchase['category_explanation']=='A one-off permit'
+    assert client.post('/api/v1/operations',json=op).json()==saved.json()

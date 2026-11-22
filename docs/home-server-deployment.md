@@ -710,3 +710,15 @@ The baseline rebuild matched all 13 previous live assets. The isolated source di
 Before deployment the shared checkout's unfinished category migration made live health `not_ready`; the matching isolated runtime restored `ok` without migrating the database. HTTPS health, all 13 asset bytes, selected service paths and push timer passed. Live receipt checks intercept every API mutation. Full commands, limitations, image results and source manifests: `output/receipt-reliable/report.md`, `deployment.json`, `live-results.json`.
 
 Rollback command: `backend/.venv/bin/python output/receipt-reliable/deploy.py --rollback`. This switches both service runtimes to the retained pre-category snapshot and restores previous static release, then restarts/verifies PigPen. No production records, commits, branch changes or pushes were made.
+
+## Monthly categories and Other — November 22, 2026
+
+Published **e0ff04fdb908bbe2** with schema **0015**, preserving the newly deployed receipt release **c039134f07f7193e**. Runtime: `output/monthly-categories/release-source`; the existing API/push service overrides point there. Previous runtime `output/receipt-reliable/release-source`, static release, and service override contents are retained. This runtime directory is part of the installed application and must not be removed during output cleanup.
+
+A fresh private backup was retained. A separate restore/migration rehearsal passed before production migration. All compared monthly/category amounts and existing financial records were preserved; original purchases and allocations were not rewritten. The additive schema adds monthly inclusion/frozen inherited plans and purchase explanations. HTTPS health and all 13 public files passed after publication. Live browser verification intercepts writes rather than creating test financial records.
+
+Final combined validation: 141 backend tests, 41 frontend unit tests, TypeScript/build/lint/contract checks, and 18 distinct browser scenarios across the focused category/budget/finance/offline/receipt/approval runs. Earlier failures from concurrent unfinished receipt work were superseded by the combined passing run. Physical iPhone and installed-PWA activation remain unverified. [Evidence, commands, changed files and recovery limits](../output/monthly-categories/verification.md).
+
+Rollback requires compatible application and database state, not merely the old static pointer: previous runtime expects 0014. Retain the backup and restore only into a new private directory; preserve/reconcile post-upgrade writes or prefer a forward fix. No automatic downgrade or destructive restoration was performed. No dependencies or unrelated machine configuration changed.
+
+Live read-only verification passed at 390px and 1440px for monthly management, Other ordering, required explanation and layout. Six automatic installation bindings were answered locally in disposable browser contexts; zero production writes were sent. Notification onboarding and profile-selection timing were handled by the verifier without changing application behavior.

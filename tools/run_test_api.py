@@ -16,10 +16,13 @@ parser=argparse.ArgumentParser()
 parser.add_argument('--port',type=int,default=8765)
 parser.add_argument('--demo',action='store_true')
 parser.add_argument('--static',action='store_true')
+parser.add_argument('--static-dir',type=Path,help='Use a verified project-local static build')
 parser.add_argument('--receipt-worker',action='store_true')
 args=parser.parse_args()
+if args.static_dir and not args.static_dir.resolve().is_relative_to(ROOT):
+    parser.error('Static test builds must stay inside the project')
 with tempfile.TemporaryDirectory(prefix='pigpen-browser-test-') as directory:
-    settings=Settings(Path(directory),'test',static_dir=ROOT/'frontend/dist' if args.static else None)
+    settings=Settings(Path(directory),'test',static_dir=args.static_dir.resolve() if args.static_dir else ROOT/'frontend/dist' if args.static else None)
     migrate(settings)
     if args.demo:
         from pigpen.service import Service
