@@ -12,9 +12,14 @@ self.addEventListener('fetch',event=>{
  else if(PRECACHE.includes(url.pathname))event.respondWith(caches.open(CACHE).then(cache=>cache.match(url.pathname)).then(cached=>cached||fetch(event.request)))
 })
 self.addEventListener('push',event=>{
- let id='',body='A household update is waiting.'
- try{const data=event.data?.json();if(typeof data?.notification_id==='string'&&/^[a-f0-9-]{36}$/i.test(data.notification_id))id=data.notification_id;if(typeof data?.body==='string'&&data.body.trim())body=data.body.slice(0,400)}catch{/* Generic notification without private payloads. */}
- event.waitUntil(Promise.all([self.clients.matchAll({type:'window',includeUncontrolled:true}).then(windows=>{for(const client of windows)client.postMessage({type:'PIGPEN_NOTIFICATION'})}),self.registration.showNotification('PigPen',{body,icon:'/icons/icon-192.png',badge:'/icons/icon-192.png',tag:id||'pigpen-update',data:{url:'/notifications'+(id?'?notification='+encodeURIComponent(id):'')}})]))
+ let id='',title='PigPen',body='A household update is waiting.'
+ try {
+  const data=event.data?.json()
+  if(typeof data?.notification_id==='string'&&/^[a-f0-9-]{36}$/i.test(data.notification_id))id=data.notification_id
+  if(typeof data?.title==='string'&&data.title.trim())title=data.title.trim().slice(0,80)
+  if(typeof data?.body==='string'&&data.body.trim())body=data.body.slice(0,400)
+ } catch {/* Use the generic notification if the payload cannot be read. */}
+ event.waitUntil(Promise.all([self.clients.matchAll({type:'window',includeUncontrolled:true}).then(windows=>{for(const client of windows)client.postMessage({type:'PIGPEN_NOTIFICATION'})}),self.registration.showNotification(title,{body,icon:'/icons/icon-192.png',badge:'/icons/icon-192.png',tag:id||'pigpen-update',data:{url:'/notifications'+(id?'?notification='+encodeURIComponent(id):'')}})]))
 })
 self.addEventListener('notificationclick',event=>{
  event.notification.close()

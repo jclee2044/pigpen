@@ -23,6 +23,7 @@ def test_wish_message_is_frozen_and_push_uses_allowlisted_fields(client,users,se
     db=Database(settings)
     while deliver_once(db,lambda sub,payload:payloads.append(payload) or 201):pass
     assert len(payloads)==1
+    assert payloads[0]['title']=='New wish-list item'
     assert payloads[0]['body']==expected
     assert set(payloads[0])=={'notification_id','url','tag','title','body'}
     assert '987654' not in str(payloads) and 'Private' not in str(payloads)
@@ -94,3 +95,4 @@ def test_comment_nudge_push_uses_requested_wording(client,household,settings):
     assert 'Alex nudged you about a comment about the Lawn chair' in bodies
     assert 'Alex commented on "Lawn chair"' in bodies
     assert all('Private' not in body and '$500' not in body for body in bodies)
+    assert {payload['title'] for payload in payloads if 'comment' in payload['body']} == {'New comment activity'}

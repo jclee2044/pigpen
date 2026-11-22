@@ -11,6 +11,20 @@ from .errors import DomainError
 
 PUSH_HOSTS=('fcm.googleapis.com','updates.push.services.mozilla.com','web.push.apple.com')
 
+NOTIFICATION_TITLES = {
+    'wishlist.created': 'New wish-list item',
+    'purchase.created': 'New purchase',
+    'request.created': 'New approval request',
+    'request.revised': 'Approval request updated',
+    'request.canceled': 'Approval request canceled',
+    'request.denied': 'Approval request denied',
+    'approval.on': 'Approval granted',
+    'approval.off': 'Approval removed',
+    'comment.created': 'New comment activity',
+    'budget.reached': 'Category budget reached',
+    'budget.exceeded': 'Category budget exceeded',
+}
+
 
 def vapid_signer(settings):
     """Validate contact URIs without py-vapid's port/path-rejecting regex."""
@@ -157,7 +171,8 @@ def deliver_once(db,sender=None):
     with db.transaction() as c:
         notification=get(c,s.notifications,job['notification_id'])
         payload={'notification_id':job['notification_id'],'url':'/notifications','tag':job['notification_id'],
-                 'title':'PigPen','body':notification['message'] or 'A household update is waiting.'}
+                 'title':NOTIFICATION_TITLES.get(notification['kind'], 'PigPen'),
+                 'body':notification['message'] or 'A household update is waiting.'}
         recipients=[dict(r) for r in c.execute(select(s.subscriptions,s.installations.c.revision.label('binding_revision'))
             .join(s.installations,s.subscriptions.c.installation_id==s.installations.c.id)
             .join(s.users,s.installations.c.user_id==s.users.c.id)
