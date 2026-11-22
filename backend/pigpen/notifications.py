@@ -9,6 +9,15 @@ def notification_message(c,op,kind,resource,target):
     """Snapshot only explicitly approved preview fields, never financial data."""
     def clean(value,limit):
         return ' '.join(str(value).split())[:limit]
+    if kind == 'analysis.ready':
+        from .monthly_reviews import reviews
+        from datetime import datetime
+        row = c.execute(select(reviews.c.month, reviews.c.status).where(reviews.c.id == target)).mappings().one()
+        month = row['month']
+        label = datetime.strptime(month, '%Y-%m').strftime('%B %Y')
+        if row['status'] == 'preview':
+            return f'Sir Pennysworth’s {label} preview is ready.'
+        return f'Sir Pennysworth’s {label} analysis is ready.'
     actor=c.execute(select(s.users.c.name).where(s.users.c.id==op['actor_id'])).scalar()
     actor=clean(actor or 'Someone',80)
     fields={'wishlist-items':(s.wishlist_items,'name'),

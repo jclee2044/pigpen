@@ -124,3 +124,7 @@ npm --prefix frontend run dev
 Purchases now offers local receipt scanning with an editable review step and automatic photo attachment. Scanned photos expire after three calendar months unless Keep indefinitely is selected; purchase details remain. See [implementation plan](docs/receipt-scan-plan.md), [OCR setup and retention operations](docs/backend-operations.md), and [verification and acceptance limitations](output/receipt-scan/verification.md). Historical paragraphs above describe earlier implementation stages.
 
 Receipt extraction was subsequently tested against public photographed receipts and refined. Use it as a **scan-and-review assistant**: verify the final charged amount (including handwriting), currency, date and item details before saving. The review acknowledgement is required. See [real-photo evaluation and recommendation limits](output/receipt-online/follow-up.md).
+
+## Monthly analyses — November 22, 2026
+
+Sir Pennysworth now prepares saved monthly budget/purchase reviews, with a push notification, a homepage card on days 1–5, an analysis archive and contextual chat. See [the monthly-analysis contract and operational defaults](docs/monthly-analysis.md). The deployed snapshot preserves the verified receipt and monthly-category releases.

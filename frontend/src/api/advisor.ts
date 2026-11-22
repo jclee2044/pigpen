@@ -8,8 +8,8 @@ export interface Insights { enabled: boolean; month: string; as_of: string; insi
 export function getInsights(month: string) {
   return request<Insights>('/advisor/insights?month=' + encodeURIComponent(month))
 }
-export function askAdvisor(actor_id: string, month: string, question: string, history: Turn[]) {
+export function askAdvisor(actor_id: string, month: string, question: string, history: Turn[], context?: {review_month:string;finding_id:string|null}) {
   return request<Answer>('/advisor/ask', {
-    method: 'POST', body: JSON.stringify({ actor_id, month, question, history }),
+    method: 'POST', body: JSON.stringify({ actor_id, month, question, history, ...context }),
   }, 75000)
 }

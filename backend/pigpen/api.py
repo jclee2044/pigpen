@@ -5,6 +5,7 @@ from sqlalchemy import select
 from .contracts import Operation, Model, AttachmentOperation, AttachmentDeleteOperation
 from pydantic import Field, AwareDatetime
 from .advisor import Advisor, Question
+from .monthly_reviews import list_reviews, read_review
 from . import sync
 from .domain import month_bounds
 from .attachments import MAX_UPLOAD, store_image, attachment_path, image_metadata
@@ -24,6 +25,14 @@ def router(db):
     service = Service(db)
 
     advisor = Advisor(db)
+
+    @routes.get('/advisor/reviews')
+    def monthly_reviews(before: str | None = None, limit: int = Query(24, ge=1, le=100)):
+        return JSONResponse(list_reviews(db, before, limit), headers={'Cache-Control': 'no-store'})
+
+    @routes.get('/advisor/reviews/{month}')
+    def monthly_review(month: str):
+        return JSONResponse(read_review(db, month), headers={'Cache-Control': 'no-store'})
 
     @routes.get('/advisor/insights')
     def advisor_insights(month: str):

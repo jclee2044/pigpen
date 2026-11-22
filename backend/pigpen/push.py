@@ -12,6 +12,7 @@ from .errors import DomainError
 PUSH_HOSTS=('fcm.googleapis.com','updates.push.services.mozilla.com','web.push.apple.com')
 
 NOTIFICATION_TITLES = {
+    'analysis.ready': 'Monthly analysis ready',
     'wishlist.created': 'New wish-list item',
     'purchase.created': 'New purchase',
     'request.created': 'New approval request',
@@ -173,6 +174,11 @@ def deliver_once(db,sender=None):
         payload={'notification_id':job['notification_id'],'url':'/notifications','tag':job['notification_id'],
                  'title':NOTIFICATION_TITLES.get(notification['kind'], 'PigPen'),
                  'body':notification['message'] or 'A household update is waiting.'}
+        if notification['kind'] == 'analysis.ready':
+            from .monthly_reviews import reviews
+            month = c.scalar(select(reviews.c.month).where(reviews.c.id == notification['target_id']))
+            if month:
+                payload['url'] = '/analyses/' + month
         recipients=[dict(r) for r in c.execute(select(s.subscriptions,s.installations.c.revision.label('binding_revision'))
             .join(s.installations,s.subscriptions.c.installation_id==s.installations.c.id)
             .join(s.users,s.installations.c.user_id==s.users.c.id)

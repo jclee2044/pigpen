@@ -457,6 +457,7 @@ test('prompt buttons cannot paint over the dashboard composer during keyboard mo
   await page.screenshot({ path: '/tmp/pigpen-prompt-overlap.png' })
   await input.blur()
   await expect(page.locator('html')).not.toHaveClass(/advisor-keyboard|chat-open/)
+  await expect(page.getByRole('link', { name: 'Review past analyses' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Where could we reallocate money?' })).toBeVisible()
   await page.getByRole('button', { name: 'Where could we reallocate money?' }).click()
   await expect(page.locator('.pig-chat')).toBeVisible()

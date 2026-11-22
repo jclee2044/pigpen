@@ -324,11 +324,12 @@ async function send(question: string) {
     <p v-else-if="loadError" role="status">Insights couldn’t load. <button class="button small" @click="retry++">Retry</button></p>
     <p v-else-if="!insights" role="status">Loading insights…</p>
     <p v-else-if="!insights.enabled" class="text-small">Chat is currently unavailable.</p>
-    <template v-if="available">
       <div class="prompts">
-        <button v-for="prompt in ['Where could we reallocate money?', 'Which purchases drove spending?']" :key="prompt" class="button small" :disabled="thinking" @click="send(prompt)">{{ prompt }}</button>
+       <template v-if="available">
+        <button class="button small" :disabled="thinking" @click="send('Where could we reallocate money?')">Where could we reallocate money?</button>
+       </template>
+       <RouterLink to="/analyses" class="button small" @click.stop>Review past analyses</RouterLink>
       </div>
-    </template>
    </div>
    <template v-else>
       <header class="chat-header"><img :src="pigFace" alt="" class="pig"><div><h2>Sir Pennysworth</h2><small>{{ monthLabel(shell.month) }}</small></div><button class="icon-button" data-touch-interactive aria-label="Close chat" @click="showChat(false)"><AppIcon name="close" /></button></header>

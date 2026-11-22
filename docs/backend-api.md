@@ -155,3 +155,7 @@ Confirmed: category inclusion belongs to a month; UI actions say **Remove**, wit
 Purchase payloads and records include `category_explanation`, default empty for old records. The protected Other category is always available as the last purchase option and requires nonblank explanation text. Receipt confirmation uses the same validation. Bills and approval proposals require a specific category; recorded purchases may use Other. Migration 0015 preserves original financial rows and adds month snapshots plus the explanation column. Legacy operation hashes remain replayable. Rejected offline purchases remain on the device, with an explicit Add category and retry purchase action retaining their original actor, date and operation ID.
 
 Receipt parser v11 also accepts a slightly lower-confidence printed total when both trusted subtotal-plus-tax and cash-minus-change calculations agree exactly. It does not invent a missing total. This receipt change ships separately from the monthly-category contract above; see the active runtime/release instructions in `docs/home-server-deployment.md`.
+
+## Monthly analyses — November 22, 2026
+
+Saved reviews, history, server-controlled five-day homepage visibility, and report-aware advisor questions follow the [monthly analysis contract](monthly-analysis.md). Existing ordinary advisor requests remain compatible. The scheduler publishes a report and deduplicated notification outbox rows atomically.

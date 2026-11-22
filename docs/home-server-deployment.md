@@ -722,3 +722,23 @@ Final combined validation: 141 backend tests, 41 frontend unit tests, TypeScript
 Rollback requires compatible application and database state, not merely the old static pointer: previous runtime expects 0014. Retain the backup and restore only into a new private directory; preserve/reconcile post-upgrade writes or prefer a forward fix. No automatic downgrade or destructive restoration was performed. No dependencies or unrelated machine configuration changed.
 
 Live read-only verification passed at 390px and 1440px for monthly management, Other ordering, required explanation and layout. Six automatic installation bindings were answered locally in disposable browser contexts; zero production writes were sent. Notification onboarding and profile-selection timing were handled by the verifier without changing application behavior.
+
+## Monthly analysis release — November 22, 2026
+
+Published **bae0e96c26ae0f81** at schema **0017**, retaining the category/receipt release **e0ff04fdb908bbe2**. Runtime is `output/monthly-analysis/release-source`; existing API/push service overrides select it. An initial deployment guard detected the concurrent category release and stopped before any mutation; the final release was rebuilt and verified on that baseline. All 25 existing table contents were preserved through the additive review migration.
+
+Verified private backup and restore/migration rehearsal, 150 backend tests, 46 frontend unit tests, 10 browser checks, build/type/lint/contract checks, one real model response using synthetic data, HTTPS health, all 14 static files, and the active push timer. Live 390px/1440px checks intercepted writes; zero verification mutations reached production. The first saved analysis covers November and is scheduled for December 1 at 08:00 America/New_York. Physical-device notification delivery and installed-PWA activation remain unverified.
+
+Rollback: `backend/.venv/bin/python output/monthly-analysis/deploy.py --rollback`. The retained old application has migration awareness for the additive schema; rollback preserves reports and post-deployment writes, without destructive database restoration. Keep the release and rollback directories. [Full commands, changes, backup paths, evidence and limits](../output/monthly-analysis/verification.md). No dependencies, commits, branches, remotes or unrelated machine configuration changed.
+
+### Explicit monthly preview — November 22, 2026
+
+At the user's request, the existing API/push runtime now uses `output/monthly-preview/release-source/backend`, adding readable current-month previews that remain eligible for completed-month generation. Static `bae0e96c26ae0f81` and schema 0017 are unchanged. November's real-data preview and test notification were generated; providers accepted four device deliveries. The full December 1 review remains scheduled. 152 backend tests passed. Prior runtime, service overrides and a new private backup are retained. See [commands, changes, deployment and device-verification limits](../output/monthly-preview/verification.md).
+
+### Preview homepage card — November 22, 2026
+
+Published static `e3638be9141313a6` and runtime `output/monthly-preview-card/release-source/backend` so explicitly requested current-month previews also appear above Ask Sir Pennysworth. Completed analyses retain the first-five-days rule. Schema 0017, records and the December schedule are unchanged. Verified 11 monthly backend tests, 11 browser tests, build/type/lint checks and HTTPS published-file integrity. Prior runtime/static release and private backup retained; see [verification](../output/monthly-preview-card/verification.md).
+
+### Monthly card colors — November 22, 2026
+
+Static release `6f0abdd8d2bce240` swaps the monthly homepage panel and button backgrounds as requested. Runtime remains `output/monthly-preview-card/release-source/backend`, schema 0017. Prior static `e3638be9141313a6` retained. Build/type/lint, HTTPS health and all 14 static files verified. [Commands, changes and live checks](../output/monthly-card-colors/verification.md).

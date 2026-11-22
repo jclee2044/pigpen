@@ -17,15 +17,22 @@ def create_app(settings: Settings | None = None):
     async def lifespan(app):
         stop=Event()
         worker=None
+        review_worker=None
         if settings.environment != 'test':
             from .receipt_worker import loop
             worker=Thread(target=loop,args=(app.state.database,stop),daemon=True)
             worker.start()
+            from .monthly_reviews import loop as review_loop
+            review_worker=Thread(target=review_loop,args=(app.state.database,stop),daemon=True)
+            review_worker.start()
         yield
         stop.set()
         if worker:
             import asyncio
             await asyncio.to_thread(worker.join,50)
+        if review_worker:
+            import asyncio
+            await asyncio.to_thread(review_worker.join,65)
     app = FastAPI(title="PigPen API", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.database = Database(settings)

@@ -6,6 +6,7 @@ import { shell } from '../state/shell'
 import { summary,recent } from '../lib/selectors'
 import { money } from '../lib/money'
 import BudgetInsights from '../components/BudgetInsights.vue'
+import MonthlyReviewCard from '../components/MonthlyReviewCard.vue'
 import PurchaseRows from '../components/PurchaseRows.vue'
 import FitMoney from '../components/FitMoney.vue'
 const chatting = ref(false)
@@ -21,6 +22,7 @@ const pendingPurchases=computed(()=>state.pending.filter(x=>x.operation.kind==='
 <template>
  <div class="dashboard-intro" :class="{ drafting: !chatting }">
  <div v-show="!chatting" class="page-heading"><h1>Dashboard</h1></div>
+ <MonthlyReviewCard v-show="!chatting" />
  <BudgetInsights v-model:expanded="chatting" />
  </div>
  <div v-if="!chatting" class="dashboard-details">
