@@ -35,6 +35,7 @@ with Image.open(sys.argv[1]) as source:
     result=engine(pixels[:,:,::-1])
 sys.path.insert(0,str(root/'backend'))
 from pigpen.receipt_layout import group_rows
+from pigpen.receipt_parser import has_receipt_text
 tokens=[]
 if result.txts:
     for box,text,score in zip(result.boxes,result.txts,result.scores):
@@ -44,4 +45,5 @@ if result.txts:
                        'height':float((np.linalg.norm(box[3]-box[0])+np.linalg.norm(box[2]-box[1]))/2),
                        'slope':float((box[1,1]-box[0,1])/max(box[1,0]-box[0,0],1)),
                        'text':str(text),'score':float(score)})
-print(json.dumps(group_rows(tokens)))
+lines=group_rows(tokens)
+print(json.dumps(lines if has_receipt_text(lines) else {'error':'receipt_text'}))

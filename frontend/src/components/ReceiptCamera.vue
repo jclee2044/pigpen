@@ -1,33 +1,37 @@
 <script setup lang="ts">
 import { computed,onMounted,onUnmounted,ref } from 'vue'
 import AppIcon from './AppIcon.vue'
-import {inspectReceipt,SteadyReceipt} from '../lib/receiptCapture'
+import {inspectReceipt,SteadyReceipt,receiptCrop,receiptPreviewSize} from '../lib/receiptCapture'
 
 const emit=defineEmits<{close:[];photo:[file:File]}>()
 const dialog=ref<HTMLDialogElement>(),video=ref<HTMLVideoElement>(),library=ref<HTMLInputElement>()
 const zoom=ref(1)
-const stage=ref<HTMLElement>(),stageWidth=ref(0),stageHeight=ref(0),aspect=3/4
+const stage=ref<HTMLElement>(),stageWidth=ref(0),stageHeight=ref(0),aspect=ref(3/4)
 let observer:ResizeObserver|undefined
 let monitor:ReturnType<typeof setInterval>|undefined,picking=false
 const steady=new SteadyReceipt(),autoStatus=ref('Fit receipt inside the frame')
-const preview=document.createElement('canvas');preview.width=240;preview.height=320
+const preview=document.createElement('canvas');preview.width=360;preview.height=480
 function monitorReceipt(){
  if(!ready.value||!video.value||capturing.value||picking||document.hidden||points.size){steady.reset();return}
  try{
   const ctx=preview.getContext('2d',{willReadFrequently:true});if(!ctx)return
-  const v=video.value,w=Math.min(v.videoWidth,v.videoHeight*aspect)/zoom.value,h=w/aspect
-  ctx.drawImage(v,(v.videoWidth-w)/2,(v.videoHeight-h)/2,w,h,0,0,240,320)
-  const frame=inspectReceipt(ctx.getImageData(0,0,240,320).data,240,320)
+  const v=video.value,crop=receiptCrop(v.videoWidth,v.videoHeight,zoom.value)
+  ctx.drawImage(v,crop.x,crop.y,crop.width,crop.height,0,0,preview.width,preview.height)
+  const frame=inspectReceipt(ctx.getImageData(0,0,preview.width,preview.height).data,preview.width,preview.height)
   autoStatus.value=!frame?'Fit receipt inside the frame':!frame.sharp?'Hold still for a clear photo':'Hold steady'
   if(steady.update(frame,performance.now())){steady.reset();void capture()}
  }catch{steady.reset()}
 }
 function openLibrary(){picking=true;steady.reset();library.value?.click()}
 const frameStyle=computed(()=>{
- const width=Math.min(stageWidth.value,stageHeight.value*aspect)
- return {width:width+'px',height:width/aspect+'px'}
+ const width=Math.min(stageWidth.value,stageHeight.value*aspect.value)
+ return {width:width+'px',height:width/aspect.value+'px'}
 })
-function loaded(){if(video.value?.videoWidth){ready.value=true}}
+function loaded(){if(video.value?.videoWidth){
+ aspect.value=video.value.videoWidth/video.value.videoHeight
+ const size=receiptPreviewSize(video.value.videoWidth,video.value.videoHeight)
+ preview.width=size.width;preview.height=size.height;steady.reset();ready.value=true
+}}
 const points=new Map<number,{x:number;y:number}>()
 function setZoom(value:number){steady.reset();zoom.value=Math.max(1,Math.min(4,value))}
 function pointerDown(e:PointerEvent){
@@ -85,11 +89,11 @@ async function capture(){
  try{
   const canvas=document.createElement('canvas')
   const sourceWidth=video.value.videoWidth,sourceHeight=video.value.videoHeight
-  const cropWidth=Math.min(sourceWidth,sourceHeight*aspect)/zoom.value,cropHeight=cropWidth/aspect
+  const crop=receiptCrop(sourceWidth,sourceHeight,zoom.value),cropWidth=crop.width,cropHeight=crop.height
   canvas.width=Math.round(cropWidth);canvas.height=Math.round(cropHeight)
   const ctx=canvas.getContext('2d')
   if(!ctx)throw new Error('capture')
-  ctx.drawImage(video.value,(sourceWidth-cropWidth)/2,(sourceHeight-cropHeight)/2,cropWidth,cropHeight,0,0,canvas.width,canvas.height)
+  ctx.drawImage(video.value,crop.x,crop.y,cropWidth,cropHeight,0,0,canvas.width,canvas.height)
   const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/jpeg',0.92))
   if(!blob)throw new Error('capture')
   if(!disposed){stop();emit('photo',new File([blob],'receipt.jpg',{type:'image/jpeg'}))}

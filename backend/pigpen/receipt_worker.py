@@ -25,8 +25,10 @@ def extract(path):
     if run.returncode:
         raise RuntimeError('OCR process failed')
     result=json.loads(run.stdout)
-    if isinstance(result,dict) and result.get('error')=='receipt_boundary':
-        raise ReceiptBoundaryError()
+    if isinstance(result,dict):
+        if result.get('error')=='receipt_boundary':
+            raise ReceiptBoundaryError()
+        raise RuntimeError('No readable receipt text')
     return parse_receipt(result)
 
 

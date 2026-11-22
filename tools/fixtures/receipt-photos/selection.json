@@ -1,0 +1,71 @@
+{
+  "source": "https://expressexpense.com/blog/free-receipt-images-ocr-machine-learning-dataset/",
+  "license": "MIT; attribution ExpressExpense.com",
+  "method": "Selected by visible physical paper deformation before running this evaluation. Existing public corpus used in earlier parser development; not an independent holdout. Original archive image bytes preserved.",
+  "cases": [
+    {
+      "id": "1003",
+      "file": "1003-receipt.jpg",
+      "merchant": "El Gran Mar de Plata",
+      "expected_total_minor": 535,
+      "condition": "Curled top/bottom edges; warm uneven lighting",
+      "sha256": "90d65fc9ab533710cfd41cb55acd42037dc85f55a208118c618e17960e4fdff8"
+    },
+    {
+      "id": "1013",
+      "file": "1013-receipt.jpg",
+      "merchant": "Albetos Mexican Food",
+      "expected_total_minor": 958,
+      "condition": "Creased paper; close crop without visible outer edges",
+      "sha256": "1b194784844014873be7a421665d207b44312a42399bb2510a043b679c758052"
+    },
+    {
+      "id": "1038",
+      "file": "1038-receipt.jpg",
+      "merchant": "Yogurtland",
+      "expected_total_minor": 1780,
+      "condition": "Crosswise fold and shadow; pale textured background",
+      "sha256": "b470f0091921131b9788f511bc358dafbf198cba2b87ca13e02a3f27507effc8"
+    },
+    {
+      "id": "1050",
+      "file": "1050-receipt.jpg",
+      "merchant": "Hollywood Cafe",
+      "expected_total_minor": 2696,
+      "condition": "Deep vertical crease, bent text; bottom edge cropped",
+      "sha256": "048045ee6247664373788085c332ffa40e81d672314f7a000dfad900ea7fa493"
+    },
+    {
+      "id": "1051",
+      "file": "1051-receipt.jpg",
+      "merchant": "General Poor\u2019s",
+      "expected_total_minor": 1070,
+      "condition": "Wrinkled lower paper and curled sides; fingers at edge",
+      "sha256": "da20014ee07d0d501e36ffa6ddb025c60cd81725604fdbe5b0277eed813c50ea"
+    },
+    {
+      "id": "1059",
+      "file": "1059-receipt.jpg",
+      "merchant": "Landfall Restaurant",
+      "expected_total_minor": 755,
+      "condition": "Multiple vertical wrinkles; dark background",
+      "sha256": "016c566321f7c9e694b6d23316c62336877c6ddde7ccdcf25a0cb26bb7858588"
+    },
+    {
+      "id": "1087",
+      "file": "1087-receipt.jpg",
+      "merchant": "Noches de Colombia",
+      "expected_total_minor": 1081,
+      "condition": "Strong creases and folded top corner; low resolution and cropped bottom",
+      "sha256": "828dfe77f1bbf54f18e476a5e74545543862a87f0c6dca583104d4131648ba1b"
+    },
+    {
+      "id": "1109",
+      "file": "1109-receipt.jpg",
+      "merchant": "BreadFish Cafe",
+      "expected_total_minor": 2762,
+      "condition": "Curled top/bottom edges; uneven illumination",
+      "sha256": "09be983f3279f32bc3c745e8b0ba52ec564558028d031a4f8ca78f5dd0053d56"
+    }
+  ]
+}

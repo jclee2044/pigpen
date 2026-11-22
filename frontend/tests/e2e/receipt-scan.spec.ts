@@ -83,7 +83,7 @@ test('fresh scan after closing, duplicate warning and explicit override',async({
  await page.getByRole('button',{name:'New purchase',exact:true}).click();await page.getByRole('button',{name:'Scan receipt',exact:true}).click()
  await expect(page.getByText('Resume a receipt')).toHaveCount(0)
  await page.getByLabel('Or choose an image').setInputFiles('tests/fixtures/scan-receipt.png')
- await expect(page.getByLabel('Amount ($)',{exact:true})).toHaveValue('7.95')
+ await expect(page.getByLabel('Amount ($)',{exact:true})).toHaveValue('7.95',{timeout:20000})
  await page.getByLabel('Category',{exact:true}).last().selectOption({label:'Food'})
  if(await page.getByLabel('I verified everything above is accurate').count())await page.getByLabel('I verified everything above is accurate').check()
  await page.getByRole('button',{name:'Save',exact:true}).click()
@@ -160,7 +160,8 @@ test('camera opens automatically, captures a photo and releases the stream',asyn
  const viewfinder=await page.locator('.camera-viewfinder').boundingBox()
  expect(frame!.width).toBeLessThanOrEqual(viewfinder!.width+1)
  expect(frame!.height).toBeLessThanOrEqual(viewfinder!.height+1)
- expect(Math.abs(frame!.width/frame!.height-3/4)).toBeLessThan(.01)
+ const sourceAspect=await page.locator('video').evaluate(el=>(el as HTMLVideoElement).videoWidth/(el as HTMLVideoElement).videoHeight)
+ expect(Math.abs(frame!.width/frame!.height-sourceAspect)).toBeLessThan(.01)
  await expect(page.getByRole('slider',{name:'Camera zoom',exact:true})).toHaveValue('1')
  const pageScale=await page.evaluate(()=>visualViewport!.scale)
  const touch=await page.context().newCDPSession(page)
@@ -187,10 +188,10 @@ test('camera opens automatically, captures a photo and releases the stream',asyn
  })
  await shutter.click()
  const size=await page.evaluate(()=>(window as unknown as {captureSize:{width:number;height:number}}).captureSize)
- expect(size.width).toBe(Math.round(Math.min(dimensions.width,dimensions.height*.75)/2))
- expect(size.height).toBe(Math.round(Math.min(dimensions.width,dimensions.height*.75)/.75/2))
+ expect(size.width).toBe(Math.round(dimensions.width/2))
+ expect(size.height).toBe(Math.round(dimensions.height/2))
  expect(await stream.evaluate(s=>s.getTracks().every(t=>t.readyState==='ended'))).toBe(true)
- await expect(page.getByRole('dialog').locator('p[role=status]')).toContainText('Could not isolate the receipt',{timeout:20000})
+ await expect(page.getByRole('dialog').locator('p[role=status]')).toContainText(/Could not (?:isolate|read) (?:the|this) receipt/,{timeout:20000})
  const popup=await page.getByRole('dialog',{name:'Scan receipt',exact:true}).boundingBox()
  expect(Math.abs(popup!.y+popup!.height/2-422)).toBeLessThan(2)
  await page.getByRole('button',{name:'Retake photo',exact:true}).click()
@@ -231,26 +232,34 @@ test.describe('desktop entry',()=>{
  })
 })
 
-test('steady receipt captures automatically without pressing the shutter',async({page,request})=>{
+for(const curved of [false,true])test(`steady ${curved?'curled and shaded':'flat'} receipt captures automatically without pressing the shutter`,async({page,request})=>{
  const fs=await import('node:fs')
  const image='data:image/png;base64,'+fs.readFileSync('tests/fixtures/scan-receipt.png').toString('base64')
- await page.addInitScript(async source=>{
+ await page.addInitScript(async({source,curved})=>{
   navigator.mediaDevices.getUserMedia=async()=>{
    const canvas=document.createElement('canvas');canvas.width=640;canvas.height=960
    const ctx=canvas.getContext('2d')!,photo=new Image();photo.src=source;await photo.decode()
-   ctx.fillStyle='#252525';ctx.fillRect(0,0,640,960)
-   ctx.drawImage(photo,100,110,440,740)
+   function draw(shift:number){
+    ctx.fillStyle='#252525';ctx.fillRect(0,0,640,960)
+    if(!curved){ctx.drawImage(photo,100+shift,110,440,740);return}
+    for(let y=0;y<740;y++){
+     const inset=45*Math.sin(y/740*Math.PI),x=100+shift+inset,w=440-2*inset
+     ctx.drawImage(photo,0,y/740*photo.height,photo.width,photo.height/740,x,110+y,w,1)
+     ctx.fillStyle=`rgba(0,0,0,${.52*Math.exp(-(((y-370)/105)**2))})`
+     ctx.fillRect(x,110+y,w,1)
+    }
+   }
+   draw(0)
    const stream=canvas.captureStream(10)
    let tick=0
    const timer=setInterval(()=>{
     if(!stream.active){clearInterval(timer);return}
-    tick++;ctx.fillStyle='#252525';ctx.fillRect(0,0,640,960)
-    ctx.drawImage(photo,100+(tick%3)*3,110,440,740)
+    tick++;draw((tick%3)*3)
    },150)
    return stream
   }
- },image)
- await seed(page,request,'Automatic capture')
+ },{source:image,curved})
+ await seed(page,request,curved?'Curled capture':'Automatic capture')
  await page.goto('/purchases')
  await page.getByRole('button',{name:'New purchase',exact:true}).click()
  await page.getByRole('button',{name:'Scan receipt',exact:true}).click()
@@ -259,6 +268,47 @@ test('steady receipt captures automatically without pressing the shutter',async(
  await expect(page.getByLabel('Amount ($)',{exact:true})).toHaveValue('7.95',{timeout:30000})
  await page.getByRole('button',{name:'Retake photo',exact:true}).click()
  await expect(page.getByRole('button',{name:'Take receipt photo',exact:true})).toBeEnabled()
+ if(curved){
+  await page.getByRole('button',{name:'Take receipt photo',exact:true}).click()
+  await expect(page.getByLabel('Amount ($)',{exact:true})).toHaveValue('7.95',{timeout:30000})
+  await page.getByRole('button',{name:'Retake photo',exact:true}).click()
+  await expect(page.getByRole('button',{name:'Take receipt photo',exact:true})).toBeEnabled()
+ }
  await page.getByRole('button',{name:'Close dialog',exact:true}).click()
  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+// Unmodified public photographs: see tools/fixtures/receipt-photos/README.md.
+for(const [id,total,automatic] of [
+ ['1003','5.35',true],['1013','9.58',true],['1038','17.80',true],['1050','26.96',true],
+ ['1051','10.70',true],['1059','7.55',true],['1087','10.81',false],['1109','27.62',true],
+] as const)test(`real receipt ${id}: ${automatic?'automatic':'manual'} capture preserves content`,async({page,request})=>{
+ const fs=await import('node:fs')
+ const image='data:image/jpeg;base64,'+fs.readFileSync(`../tools/fixtures/receipt-photos/${id}-receipt.jpg`).toString('base64')
+ await page.addInitScript(source=>{
+  navigator.mediaDevices.getUserMedia=async()=>{
+   const photo=new Image();photo.src=source;await photo.decode()
+   const canvas=document.createElement('canvas');canvas.width=photo.width;canvas.height=photo.height
+   const ctx=canvas.getContext('2d')!;ctx.drawImage(photo,0,0)
+   const stream=canvas.captureStream(10)
+   const timer=setInterval(()=>{if(stream.active)ctx.drawImage(photo,0,0);else clearInterval(timer)},150)
+   return stream
+  }
+ },image)
+ await seed(page,request,`Real receipt ${id}`)
+ await page.goto('/purchases')
+ await page.getByRole('button',{name:'New purchase',exact:true}).click()
+ await page.getByRole('button',{name:'Scan receipt',exact:true}).click()
+ await expect(page.getByRole('button',{name:'Take receipt photo',exact:true})).toBeEnabled()
+ if(!automatic){
+  // The image has clipped text at its bottom edge. Manual capture still works.
+  await page.waitForTimeout(1500)
+  await expect(page.getByRole('button',{name:'Take receipt photo',exact:true})).toBeEnabled()
+  await page.getByRole('button',{name:'Take receipt photo',exact:true}).click()
+ }
+ await expect(page.getByLabel('Amount ($)',{exact:true})).toHaveValue(total,{timeout:30000})
+ if(id==='1109')await expect(page.getByLabel('Merchant',{exact:true})).toHaveValue('BreadFish Cafe')
+ await page.screenshot({path:`../output/receipt-reliable/review-${id}.png`})
+ await page.getByRole('button',{name:'Close dialog',exact:true}).click()
+ await page.getByRole('button',{name:'Leave',exact:true}).click()
 })

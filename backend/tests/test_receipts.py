@@ -166,3 +166,11 @@ def test_uncertain_receipt_boundary_fails_without_purchase(client, users, settin
     assert 'Retake' in result['error']
     assert result['suggestions'] is None
     assert not client.get('/api/v1/purchases').json()['items']
+
+
+def test_ocr_unreadable_text_is_a_controlled_failure(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from pigpen import receipt_worker
+    monkeypatch.setattr(receipt_worker.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0, stdout='{"error":"receipt_text"}'))
+    with pytest.raises(RuntimeError):
+        receipt_worker.extract(tmp_path / 'unused.jpg')

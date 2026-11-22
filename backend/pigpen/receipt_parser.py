@@ -4,7 +4,7 @@ import re
 from datetime import datetime, date
 from decimal import Decimal
 
-PARSER_VERSION = '10'
+PARSER_VERSION = '11'
 PRICE = re.compile(r'(?<![\d.,])\$?(-?(?:\d{1,6}(?:,\d{3})*)?\.\d{2})(?!\d)')
 SUMMARY = re.compile(r'\b(sub[ -]*total|subtctal|supbttal|sub/tt[1l]|original\s+ttl|sub\s*w|total|tota|tctal|totl|jotal|tax\w*|txtl|tip|gratuity|discount|coupon|savings|change|chng|cash|tend\w*|balance|visa|mastercard|debit|credit|payment|paid|amt\s+due|amount\s+due|ser[vu]ice(?:\s*\d|\s+charge|\s+fee)|serv\.|processing\s+fee|atm\s+charge|counter[- ](?:eat|take)|carry\s*out|delivery\s+charge)\b', re.I)
 HEADER = re.compile(r'\b(for a chance|survey|discover|store|served|place your|waiter|duplicate|demo\s+system|acct|auth|trans(?:action)?|card|seat|amount|guest\w*|server|date|table|cashier|check|order|receipt|invoice|thank\w*|welcome|tel|te1|phone|fax|terminal|register|station|qty|dine|dessert|beverage)\b|https?://|www\.|\b\d{5}(?:-\d{4})?\b|\d.*\b(st|street|ave|avenue|road|rd|blvd|drive|dr|hwy|turnpike)\b', re.I)
@@ -63,10 +63,13 @@ def parse_receipt(lines):
     totals, items, dates, subtotals, taxes, payments, service_totals = [], [], [], [], [], [], []
     adjustments=[]
     trailing_amounts=[]
+    net_amounts=[]
+    subtotal_evidence=[]
     last_total_index=-1
     tip_guide=False
     cash=[]
     changes=[]
+    arithmetic_scores=[]
     paid_totals=[]
     merchant = None
     unsupported = any(re.search(r'€|£|\b(EUR|GBP|CAD|AUD|JPY|MYR|SGD|INR|NZD|CHF|RM|Rs|RS|RUPEES|EURO|SDN BHD)\b', t) for t in texts)
@@ -88,12 +91,16 @@ def parse_receipt(lines):
             continue
         last,value=prices[-1]
         label=text[:last.start()].strip(' .$:*:')
+        if re.search(r'\b(?:pu.chases?|transactions?)\s+under\s*\$',text,re.I):
+            continue
         label=re.sub(r'^(?:\d{1,2}/\d{1,2}\s+)?\d{1,2}:\d{2}\s*(?:[ap](?:m)?)?\s*','',label,flags=re.I)
         # A misread currency glyph can sit between a total label and its price.
         if re.fullmatch(r'total\s+[0-9]',label,re.I) and value in payments:label='TOTAL'
         if prices and re.search(r'\b(?:tip|gratuity|service charge|processing fee|surcharge)\b',label,re.I) and not re.search(r'suggest|guide|not included',label,re.I):adjustments.append(value)
-        if re.fullmatch(r'cash',label,re.I):cash.append(value)
-        if re.fullmatch(r'change(?:\s+due)?',label,re.I):changes.append(value)
+        if re.fullmatch(r'cash',label,re.I):
+            cash.append(value);arithmetic_scores.append(confidence)
+        if re.fullmatch(r'change(?:\s+due)?',label,re.I):
+            changes.append(value);arithmetic_scores.append(confidence)
         if re.fullmatch(r'payment',label,re.I):paid_totals.append((value,confidence,confidence,text))
         suffix=re.search(r'\btotal\s+paid$',label,re.I)
         if suffix and value in payments and item_region_ended:label='total paid'
@@ -107,11 +114,14 @@ def parse_receipt(lines):
             totals.append((value,confidence,price_score,text))
             item_region_ended=True
         elif re.search(r'\b(?:sub[ -]*total|subtctal|supbttal|sub/tt[1l]|original\s+ttl)\b',label,re.I):
-            subtotals.append(value);item_region_ended=True
+            subtotals.append(value);subtotal_evidence.append((value,confidence,text));item_region_ended=True
+        elif re.fullmatch(r'amount',label,re.I):
+            net_amounts.append((value,confidence));item_region_ended=True
         elif re.fullmatch(r'(?:to[- ]go|drive\s+thru)',label,re.I):
             service_totals.append((value,confidence,confidence,text));item_region_ended=True
         elif SUMMARY.search(label):
-            if re.fullmatch(r'(?:sales\s+)?tax(?:\s*\d+)?(?:\s*\(?[\d.]+%\)?)?',label,re.I):taxes.append(value)
+            if re.fullmatch(r'(?:sales\s+)?tax(?:\s+rate)?(?:\s*\d+)?[ :]*(?:\(?[\d.]+%\)?)?',label,re.I):
+                taxes.append(value);arithmetic_scores.append(confidence)
             if re.search(r'\b(cash|visa|mastercard|debit|credit|paid)\b',label,re.I):payments.append(value)
             if not re.search(r'\b(coupon|discount|savings)\b',label,re.I):item_region_ended=True
         elif not tip_guide and last_total_index>=0:
@@ -132,7 +142,12 @@ def parse_receipt(lines):
     if any(v>0 and v in payments for v,_,_,_ in totals):
         totals=[t for t in totals if t[0]!=0 or not re.match(r'(?:amount|amt|balance)\s+due',t[3],re.I)]
     totals.extend(t for t in service_totals if t[0] in corroborated)
-    values={v for v,score,price_score,_ in totals if v>0 and (score>=.9 or (price_score>=.9 and v in corroborated) or (score>=.85 and v in payments and v==arithmetic_total))}
+    # Two independent printed calculations can corroborate a slightly weaker total.
+    double_checked=(len(cash)==1 and len(changes)==1 and arithmetic_total is not None
+                    and cash[0]-changes[0]==arithmetic_total and not adjustments
+                    and all(score>=.9 for score in arithmetic_scores)
+                    and all(score>=.9 for _,score,_ in subtotal_evidence))
+    values={v for v,score,price_score,_ in totals if v>0 and (score>=.9 or (price_score>=.9 and v in corroborated) or (score>=.85 and v==arithmetic_total and (v in payments or double_checked)))}
     amount=next(iter(values)) if len(values)==1 and all(v in values for v,_,_,_ in totals) else None
     # A separately printed balance may corroborate the aggregate of seat totals.
     if amount is None and totals and re.match(r'balance\s+due',totals[-1][3],re.I):
@@ -141,6 +156,15 @@ def parse_receipt(lines):
         for value,score,_,_ in totals[:-1]:
             if score>=.9 and value!=final:preceding.append(value)
         if preceding and sum(preceding)==final and totals[-1][1]>=.9:amount=final
+    # Some receipts print a net Amount, Tax Rate and tax-inclusive Sub-Total.
+    # Use that printed subtotal only when all three high-confidence amounts
+    # reconcile exactly; never synthesize a missing final amount.
+    if amount is None and not totals and len(net_amounts)==1 and len(taxes)==1 and not adjustments:
+        net,confidence=net_amounts[0]
+        inclusive=[(v,t) for v,score,t in subtotal_evidence if score>=.9 and v==net+taxes[0]]
+        if confidence>=.9 and len(inclusive)==1 and all(score>=.9 for score in arithmetic_scores):
+            amount,text=inclusive[0]
+            totals.append((amount,1.0,1.0,text))
     receipt_totals=[v for v,score,_,t in totals if re.match(r'receipt\s+total',t,re.I) and score>=.9]
     if len(set(receipt_totals))==1:
         amount=receipt_totals[0]
@@ -182,3 +206,11 @@ def parse_receipt(lines):
             'merchant':merchant,'amount_minor':amount,'transaction_date':dates[0] if len(set(dates))==1 else None,
             'description':description,'line_items':items,'warnings':warnings,
             'evidence':{'total_lines':[t for _,_,_,t in totals]},'parser_version':PARSER_VERSION}
+
+
+def has_receipt_text(lines):
+    """Require readable monetary receipt evidence after permissive paper framing."""
+    texts=[line.get('text','') for line in lines if line.get('score',0)>=.75]
+    monetary=[text for text in texts if money(text)]
+    summary=any(SUMMARY.search(text) and money(text) for text in texts)
+    return len(texts)>=4 and len(monetary)>=1 and summary

@@ -119,3 +119,42 @@ def test_dollar_decimal_comma_and_generic_service_item():
     assert parse_receipt(rows('Total $1,234.56'))['amount_minor']==123456
     assert parse_receipt(rows('Total 16,03'))['amount_minor'] is None
     assert parse_receipt(rows('Total $16,03','Total $17.03'))['amount_minor'] is None
+
+
+def test_receipt_policy_amount_is_not_a_second_charge():
+    for text in ['FOR PURCHASES UNDER $20.00', 'FOR PUFCHASES UNDER $20.00']:
+        assert parse_receipt(rows('LOCAL SHOP','TOTAL 17.80','NO SIGNATURE REQUIRED',text))['amount_minor']==1780
+    assert parse_receipt(rows('LOCAL SHOP','TOTAL 17.80','Handwritten 20.00'))['amount_minor'] is None
+
+
+def test_tax_inclusive_subtotal_requires_printed_arithmetic():
+    valid=rows('LOCAL CAFE','Amount: $25.34','Tax Rate:(9.00%): $2.28','Sub-Total: $27.62','TIP GUIDE','15% = $3.80')
+    assert parse_receipt(valid)['amount_minor']==2762
+    assert parse_receipt(valid[:2]+valid[3:])['amount_minor'] is None
+    assert parse_receipt(rows('Amount 25.34','Tax 2.28','Sub-Total 28.62'))['amount_minor'] is None
+    assert parse_receipt(rows('Amount 25.34','Tax 2.28','Sub-Total 27.62','Tip ___'))['amount_minor'] is None
+    assert parse_receipt(rows('Amount 25.34','Tax 2.28','Sub-Total 27.62','Service charge 2.00'))['amount_minor'] is None
+    for index in [1,2,3]:
+        low=[*valid];low[index]={**low[index],'score':.6}
+        assert parse_receipt(low)['amount_minor'] is None
+
+
+def test_readable_receipt_evidence_required():
+    from pigpen.receipt_parser import has_receipt_text
+    assert has_receipt_text(rows('LOCAL CAFE','123 MAIN ST','2026-11-22','TOTAL 7.95'))
+    assert not has_receipt_text([])
+    assert not has_receipt_text(rows('A LETTER','TO A FRIEND','ABOUT THE WEATHER','HELLO WORLD'))
+    assert not has_receipt_text([{'text':'TOTAL 7.95','score':.1}]*10)
+
+
+def test_weaker_total_requires_two_trusted_independent_calculations():
+    evidence=rows('Subtotal 7.50','Tax .45','TOTAL 7.95','Cash 10.00','Change 2.05')
+    evidence[2]['score']=.89
+    assert parse_receipt(evidence)['amount_minor']==795
+    assert parse_receipt(evidence[:-1])['amount_minor'] is None
+    for index,text in [(0,'Subtotal 8.50'),(4,'Change 2.00')]:
+        changed=[dict(row) for row in evidence];changed[index]['text']=text
+        assert parse_receipt(changed)['amount_minor'] is None
+    for index in [0,1,2,3,4]:
+        changed=[dict(row) for row in evidence];changed[index]['score']=.7
+        assert parse_receipt(changed)['amount_minor'] is None
